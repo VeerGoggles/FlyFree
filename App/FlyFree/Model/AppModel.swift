@@ -33,6 +33,11 @@ final class AppModel {
     var dominantHand: FlyFreeCore.Chirality = .right
     var flightAssist: FlightAssistMode = .velocityHold
     var invertPitch = false
+    /// Upgrade scenery with RealityHD's procedural photoreal assets.
+    var hdScenery = true
+
+    enum HDStatus: Equatable { case off, loading, ready, failed }
+    var hdStatus = HDStatus.off
     #if targetEnvironment(simulator)
     var inputSource: InputSource = .simulated
     #else

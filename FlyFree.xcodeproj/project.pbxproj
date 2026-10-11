@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1ACB28CD818146EC04A3D8D5 /* TelemetryReadout.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFB2942D28452FB77A672F99 /* TelemetryReadout.swift */; };
 		28D8F06E6677E6FEB59444B5 /* MeshFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 266D732FB769B0D2E2E67828 /* MeshFactory.swift */; };
+		3550BA86C7FC4D83D2E965C5 /* GlyphText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38B8CAA07458DF904E3B4081 /* GlyphText.swift */; };
 		49BFD3F6109C4F5F33499CB7 /* SpeedGauge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD0BDC3CE2CC1CD2B7BA897 /* SpeedGauge.swift */; };
 		4D6705378498654F50969B4B /* FlyFreeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A49F94D2C31E741F5AD7733 /* FlyFreeApp.swift */; };
 		5114B05119D20F5C693844D3 /* HandInstruments.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F11139EFAA7676545D33E0 /* HandInstruments.swift */; };
@@ -16,7 +17,9 @@
 		6DAA918C25C20664391C0602 /* ScoreHologram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55890B0B06A35B7C8C328D27 /* ScoreHologram.swift */; };
 		7C8B2F9C002853D91173179D /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5F1B34611FEC0DC19AE1EA9 /* AppModel.swift */; };
 		AA0D5CEB09E4F71CB4FEB513 /* HandPlate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EC6F18B9E616EC3B8D18691 /* HandPlate.swift */; };
+		AC528AE83410FEA7EECEDFD7 /* HDScenery.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45573AD4DEB5D30F90E6560 /* HDScenery.swift */; };
 		BEFEF1FC5305DA612A909C44 /* SimulatedHands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70108A51DFB65F0D31F8448B /* SimulatedHands.swift */; };
+		CEB42978C077E5A07056E8C6 /* RealityHD in Frameworks */ = {isa = PBXBuildFile; productRef = B844D73B298B3A14382C6DDD /* RealityHD */; };
 		D13F9B4775888D7FB3D46CA7 /* CockpitScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B415AE50D31D601BA97F07D7 /* CockpitScene.swift */; };
 		D362C12DF5BC32EE7F97036C /* CockpitImmersiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1779D97522FB27265B155A49 /* CockpitImmersiveView.swift */; };
 		D657CE331F478A79EE5E9C2E /* HangarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6151C23B1DFEBD0A1DA059D0 /* HangarView.swift */; };
@@ -30,6 +33,7 @@
 		1AD0BDC3CE2CC1CD2B7BA897 /* SpeedGauge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedGauge.swift; sourceTree = "<group>"; };
 		266D732FB769B0D2E2E67828 /* MeshFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshFactory.swift; sourceTree = "<group>"; };
 		309823AF53AEF4C2AC6855FB /* HandTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTrackingService.swift; sourceTree = "<group>"; };
+		38B8CAA07458DF904E3B4081 /* GlyphText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlyphText.swift; sourceTree = "<group>"; };
 		3F394BC0A1F477D602645DC0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		55890B0B06A35B7C8C328D27 /* ScoreHologram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreHologram.swift; sourceTree = "<group>"; };
 		57DDA00698BAFD825C53567E /* FlyFree.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FlyFree.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -39,6 +43,8 @@
 		B4F11139EFAA7676545D33E0 /* HandInstruments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandInstruments.swift; sourceTree = "<group>"; };
 		B5F1B34611FEC0DC19AE1EA9 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		BFB2942D28452FB77A672F99 /* TelemetryReadout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryReadout.swift; sourceTree = "<group>"; };
+		D45573AD4DEB5D30F90E6560 /* HDScenery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HDScenery.swift; sourceTree = "<group>"; };
+		DC5C1DBCE0222FD98C8769BA /* RealityHD */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RealityHD; path = Vendor/RealityHD; sourceTree = SOURCE_ROOT; };
 		F55C532E50E37075F22BFC28 /* FlyFreeCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = FlyFreeCore; path = Packages/FlyFreeCore; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -48,6 +54,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F1E6F3EC1656D0A22BB530F9 /* FlyFreeCore in Frameworks */,
+				CEB42978C077E5A07056E8C6 /* RealityHD in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -67,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				F55C532E50E37075F22BFC28 /* FlyFreeCore */,
+				DC5C1DBCE0222FD98C8769BA /* RealityHD */,
 			);
 			path = Packages;
 			sourceTree = "<group>";
@@ -76,8 +84,10 @@
 			children = (
 				1779D97522FB27265B155A49 /* CockpitImmersiveView.swift */,
 				B415AE50D31D601BA97F07D7 /* CockpitScene.swift */,
+				38B8CAA07458DF904E3B4081 /* GlyphText.swift */,
 				B4F11139EFAA7676545D33E0 /* HandInstruments.swift */,
 				0EC6F18B9E616EC3B8D18691 /* HandPlate.swift */,
+				D45573AD4DEB5D30F90E6560 /* HDScenery.swift */,
 				266D732FB769B0D2E2E67828 /* MeshFactory.swift */,
 				55890B0B06A35B7C8C328D27 /* ScoreHologram.swift */,
 				1AD0BDC3CE2CC1CD2B7BA897 /* SpeedGauge.swift */,
@@ -157,6 +167,7 @@
 			name = FlyFree;
 			packageProductDependencies = (
 				C5E45F894023BC43BED3403E /* FlyFreeCore */,
+				B844D73B298B3A14382C6DDD /* RealityHD */,
 			);
 			productName = FlyFree;
 			productReference = 57DDA00698BAFD825C53567E /* FlyFree.app */;
@@ -187,6 +198,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				96DCF08DBE4B05479909560E /* XCLocalSwiftPackageReference "Packages/FlyFreeCore" */,
+				19EF72A27DDC1CB40871D88C /* XCLocalSwiftPackageReference "Vendor/RealityHD" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ED4CEAF180CFF695B8971C97 /* Products */;
@@ -207,6 +219,8 @@
 				D362C12DF5BC32EE7F97036C /* CockpitImmersiveView.swift in Sources */,
 				D13F9B4775888D7FB3D46CA7 /* CockpitScene.swift in Sources */,
 				4D6705378498654F50969B4B /* FlyFreeApp.swift in Sources */,
+				3550BA86C7FC4D83D2E965C5 /* GlyphText.swift in Sources */,
+				AC528AE83410FEA7EECEDFD7 /* HDScenery.swift in Sources */,
 				5114B05119D20F5C693844D3 /* HandInstruments.swift in Sources */,
 				AA0D5CEB09E4F71CB4FEB513 /* HandPlate.swift in Sources */,
 				58CAFCB1B1F3000BD6FC3540 /* HandTrackingService.swift in Sources */,
@@ -274,7 +288,7 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
-				XROS_DEPLOYMENT_TARGET = 2.0;
+				XROS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};
@@ -356,7 +370,7 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				XROS_DEPLOYMENT_TARGET = 2.0;
+				XROS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
@@ -403,6 +417,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		19EF72A27DDC1CB40871D88C /* XCLocalSwiftPackageReference "Vendor/RealityHD" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Vendor/RealityHD;
+		};
 		96DCF08DBE4B05479909560E /* XCLocalSwiftPackageReference "Packages/FlyFreeCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/FlyFreeCore;
@@ -410,6 +428,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		B844D73B298B3A14382C6DDD /* RealityHD */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RealityHD;
+		};
 		C5E45F894023BC43BED3403E /* FlyFreeCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FlyFreeCore;

@@ -28,6 +28,17 @@ struct CockpitImmersiveView: View {
             scene.mountInGuide(attachments.entity(for: Panel.simulator),
                                position: [0.62, 1.05, -0.4], yaw: -0.8, pitch: -0.25)
 
+            if model.hdScenery {
+                model.hdStatus = .loading
+                let world = model.craft.world
+                Task {
+                    let ok = await scene.upgradeToHD(world: world)
+                    model.hdStatus = ok ? .ready : .failed
+                }
+            } else {
+                model.hdStatus = .off
+            }
+
             subscription = content.subscribe(to: SceneEvents.Update.self) { event in
                 model.tick(dt: event.deltaTime)
                 scene.apply(model)
@@ -175,6 +186,11 @@ struct CalibrationPanel: View {
                     .font(.callout)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
+                if model.hdStatus == .loading {
+                    Label("Building HD scenery…", systemImage: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 HStack(spacing: 24) {
                     HandStatusChip(label: "Left", readiness: model.calibrationProgress.left)
                     HandStatusChip(label: "Right", readiness: model.calibrationProgress.right)

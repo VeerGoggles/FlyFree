@@ -1,4 +1,5 @@
 import FlyFreeCore
+import RealKit
 import RealityKit
 import UIKit
 
@@ -34,6 +35,15 @@ final class CockpitScene {
     private let ground = Entity()
     private let horizon = Entity()
     private let flightPathMarker = Entity()
+    /// Procedural pieces that RealityHD replaces once its assets are ready.
+    private let proceduralShell = Entity()
+    private let proceduralSky = Entity()
+    private let proceduralGround = Entity()
+    private let proceduralRunway = Entity()
+    private let proceduralMountains = Entity()
+    private var clutterEnabled = true
+    private var earthLighting: RealEnvironment?
+    private let style: CockpitStyle
 
     private var gates: [(gate: Gate, ring: ModelEntity, halo: ModelEntity)] = []
     private var gateStyles: [Int: GateStyle] = [:]
@@ -48,6 +58,7 @@ final class CockpitScene {
     private let pivot = SIMD3<Float>(0, 1.2, 0)
 
     init(craft: CraftDefinition, course: Course) {
+        style = craft.cockpit
         thrusters = ThrusterHologram(craft: craft)
         speedometer = SpeedGauge(scale: craft.speedGauge)
         root.addChild(flight)
@@ -124,9 +135,10 @@ final class CockpitScene {
         // Wrap in Double so positions stay precise however far the craft has flown.
         wrap(asteroids, around: s.position, size: fieldSize)
         wrap(dust, around: s.position, size: dustSize)
-        wrap(clutter, around: s.position, size: clutterSize, horizontalOnly: true)
+        if clutterEnabled { wrap(clutter, around: s.position, size: clutterSize, horizontalOnly: true) }
         wrap(clouds, around: s.position, size: cloudSize, horizontalOnly: true)
-        ground.position = SIMD3(position.x, 0, position.z)  // an endless plain under the craft
+        // An endless plain under the craft, moved in 120 m steps so its texture stays world-locked.
+        ground.position = SIMD3((position.x / 120).rounded() * 120, 0, (position.z / 120).rounded() * 120)
         horizon.position = SIMD3(0, -position.y, 0)
 
         // Flight-path marker: where the craft is actually going, in cockpit (body) axes.
@@ -148,6 +160,50 @@ final class CockpitScene {
             if horizontalOnly { wrapped.y = offset.y }
             offset = wrapped
             entity.position = SIMD3(Float(offset.x), Float(offset.y), Float(offset.z))
+        }
+    }
+
+    // MARK: - RealityHD upgrade
+
+    /// Builds RealityHD assets for this scene in the background and swaps them in.
+    /// Returns false if the upgrade failed (the procedural scene stays).
+    func upgradeToHD(world kind: WorldKind) async -> Bool {
+        do {
+            switch kind {
+            case .deepSpace:
+                RealAtmosphere.fogDensity = 0  // no aerial perspective in vacuum
+                let prototypes = try await HDScenery.asteroidPrototypes()
+                for (i, (asteroid, _)) in asteroids.enumerated() {
+                    let rock = prototypes[i % prototypes.count].clone(recursive: true)
+                    rock.scale = SIMD3(repeating: 2)  // unit sphere (2 m) → ~1 m boulder × 2
+                    asteroid.model = nil
+                    asteroid.addChild(rock)
+                }
+            case .earth:
+                let earth = try await HDScenery.earth()
+                proceduralSky.isEnabled = false
+                sky.addChild(earth.environment.root)
+                proceduralGround.isEnabled = false
+                ground.addChild(earth.ground)
+                proceduralRunway.isEnabled = false
+                world.addChild(earth.runway)
+                proceduralMountains.isEnabled = false
+                world.addChild(earth.mountains)
+                clutterEnabled = false
+                for (e, _) in clutter { e.isEnabled = false }
+                world.addChild(earth.forests)
+                // Image-based light for the scenery only; holographic instruments stay unlit.
+                for e in [sky, field, world] { earth.environment.illuminate(e) }
+                earthLighting = earth.environment
+            }
+            let shell = try await HDScenery.cockpitShell(style: style)
+            proceduralShell.isEnabled = false
+            cockpit.addChild(shell)
+            earthLighting?.illuminate(shell)
+            return true
+        } catch {
+            print("RealityHD upgrade failed: \(error)")
+            return false
         }
     }
 
@@ -264,9 +320,10 @@ final class CockpitScene {
         let skyDome = ModelEntity(mesh: .generateSphere(radius: 14000),
                                   materials: [MeshFactory.glow(UIColor(red: 0.42, green: 0.64, blue: 0.92, alpha: 1))])
         skyDome.scale = [-1, 1, 1]
-        sky.addChild(skyDome)
+        sky.addChild(proceduralSky)
+        proceduralSky.addChild(skyDome)
 
-        field.addChild(horizon)
+        proceduralSky.addChild(horizon)
         for (radius, height, opacity) in [(12500, 900, 0.55), (12000, 2200, 0.3), (11500, 4500, 0.15)] as [(Float, Float, Float)] {
             horizon.addChild(ModelEntity(mesh: MeshFactory.band(radius: radius, height: height),
                                          materials: [MeshFactory.glow(UIColor(red: 0.85, green: 0.9, blue: 0.97, alpha: 1), opacity: opacity)]))
@@ -278,17 +335,18 @@ final class CockpitScene {
         sun.position = sunDirection * 12000
         sun.addChild(ModelEntity(mesh: .generateSphere(radius: 260), materials: [MeshFactory.glow(UIColor(red: 1, green: 0.98, blue: 0.9, alpha: 1))]))
         sun.addChild(ModelEntity(mesh: .generateSphere(radius: 700), materials: [MeshFactory.glow(UIColor(red: 1, green: 0.95, blue: 0.8, alpha: 1), opacity: 0.18)]))
-        sky.addChild(sun)
+        proceduralSky.addChild(sun)
         let light = DirectionalLight()
         light.light.intensity = 6000
         light.look(at: .zero, from: sunDirection * 100, relativeTo: nil)
-        sky.addChild(light)
+        proceduralSky.addChild(light)
 
         // Endless plain (follows the craft horizontally).
         var grass = PhysicallyBasedMaterial()
         grass.baseColor = .init(tint: UIColor(red: 0.33, green: 0.45, blue: 0.24, alpha: 1))
         grass.roughness = 1.0
-        ground.addChild(ModelEntity(mesh: .generatePlane(width: 26000, depth: 26000), materials: [grass]))
+        proceduralGround.addChild(ModelEntity(mesh: .generatePlane(width: 26000, depth: 26000), materials: [grass]))
+        ground.addChild(proceduralGround)
         world.addChild(ground)
 
         buildRunway()
@@ -305,14 +363,15 @@ final class CockpitScene {
                                        materials: [PhysicallyBasedMaterial.make(rockTones[i % 2], roughness: 1)])
             mountain.scale = [radius, height, radius * (0.8 + rng.next() * 0.4)]
             mountain.position = [cos(a) * distance + 3000, 0, sin(a) * distance - 5000]
+            proceduralMountains.addChild(mountain)
             if height > 1100 {
                 let cap = ModelEntity(mesh: .generateSphere(radius: 1), materials: [snow])
                 cap.scale = [0.42, 0.25, 0.42]
                 cap.position = [0, 0.86, 0]
                 mountain.addChild(cap)
             }
-            world.addChild(mountain)
         }
+        world.addChild(proceduralMountains)
 
         // Ground clutter — trees, rocks, buildings — repeating around the craft: speed cues low down.
         let tree = PhysicallyBasedMaterial.make(UIColor(red: 0.16, green: 0.3, blue: 0.14, alpha: 1), roughness: 1)
@@ -373,19 +432,20 @@ final class CockpitScene {
         let paint = PhysicallyBasedMaterial.make(UIColor(white: 0.92, alpha: 1), roughness: 0.6)
         let runway = ModelEntity(mesh: .generateBox(size: [45, 0.1, 3000]), materials: [asphalt])
         runway.position = [0, 0.02, -1300]
-        world.addChild(runway)
+        proceduralRunway.addChild(runway)
         for i in 0..<48 {
             let dash = ModelEntity(mesh: .generateBox(size: [0.9, 0.12, 30]), materials: [paint])
             dash.position = [0, 0.03, 150 - Float(i) * 60]
-            world.addChild(dash)
+            proceduralRunway.addChild(dash)
         }
         for end: Float in [170, -2770] {
             for k in 0..<8 {
                 let bar = ModelEntity(mesh: .generateBox(size: [1.8, 0.12, 30]), materials: [paint])
                 bar.position = [Float(k - 4) * 4.5 + 2.25, 0.03, end]
-                world.addChild(bar)
+                proceduralRunway.addChild(bar)
             }
         }
+        world.addChild(proceduralRunway)
         let edge = MeshFactory.glow(UIColor(red: 1, green: 0.95, blue: 0.7, alpha: 1))
         for i in 0..<50 {
             for x: Float in [-23.5, 23.5] {
@@ -504,35 +564,38 @@ final class CockpitScene {
         let warm = MeshFactory.emissive(UIColor(red: 1, green: 0.55, blue: 0.15, alpha: 1), intensity: 2)
         let screen = MeshFactory.emissive(UIColor(red: 0.05, green: 0.25, blue: 0.35, alpha: 1), intensity: 1)
 
-        func box(_ size: SIMD3<Float>, _ position: SIMD3<Float>, _ material: any RealityKit.Material, tilt: Float = 0, radius: Float = 0.01) {
+        cockpit.addChild(proceduralShell)
+        // Structural pieces go in `proceduralShell` (replaced by RealityHD); trims stay.
+        func box(_ size: SIMD3<Float>, _ position: SIMD3<Float>, _ material: any RealityKit.Material, tilt: Float = 0,
+                 radius: Float = 0.01, trimPiece: Bool = false) {
             let e = ModelEntity(mesh: .generateBox(size: size, cornerRadius: radius), materials: [material])
             e.position = position
             e.orientation = simd_quatf(angle: tilt, axis: [1, 0, 0])
-            cockpit.addChild(e)
+            (trimPiece ? cockpit : proceduralShell).addChild(e)
         }
 
         func strut(from a: SIMD3<Float>, to b: SIMD3<Float>, thickness: Float = 0.045) {
             let e = ModelEntity(mesh: .generateBox(size: [thickness, simd_length(b - a), thickness], cornerRadius: 0.01), materials: [trim])
             e.position = (a + b) / 2
             e.orientation = simd_quatf(from: [0, 1, 0], to: simd_normalize(b - a))
-            cockpit.addChild(e)
+            proceduralShell.addChild(e)
         }
 
         // Floor with light strips.
         box([1.8, 0.03, 2.0], [0, 0, -0.2], hull)
-        for x: Float in [-0.6, 0.6] { box([0.015, 0.005, 1.6], [x, 0.018, -0.2], accent, radius: 0.002) }
+        for x: Float in [-0.6, 0.6] { box([0.015, 0.005, 1.6], [x, 0.018, -0.2], accent, radius: 0.002, trimPiece: true) }
 
         // Main console, with dark screens and a glowing edge.
         box([1.3, 0.05, 0.4], [0, 0.82, -0.6], hull, tilt: 0.35)
         box([1.3, 0.8, 0.05], [0, 0.42, -0.78], hull)
-        box([1.24, 0.008, 0.012], [0, 0.875, -0.415], accent, radius: 0.003)
-        for x: Float in [-0.42, 0.42] { box([0.26, 0.006, 0.2], [x, 0.855, -0.6], screen, tilt: 0.35, radius: 0.004) }
+        box([1.24, 0.008, 0.012], [0, 0.875, -0.415], accent, radius: 0.003, trimPiece: true)
+        for x: Float in [-0.42, 0.42] { box([0.26, 0.006, 0.2], [x, 0.855, -0.6], screen, tilt: 0.35, radius: 0.004, trimPiece: true) }
 
         // Side consoles.
         for x: Float in [-0.68, 0.68] {
             box([0.3, 0.06, 0.8], [x, 0.7, -0.15], hull)
             box([0.3, 0.7, 0.05], [x, 0.35, -0.55], hull)
-            box([0.008, 0.008, 0.76], [x + (x < 0 ? 0.15 : -0.15), 0.735, -0.15], warm, radius: 0.002)
+            box([0.008, 0.008, 0.76], [x + (x < 0 ? 0.15 : -0.15), 0.735, -0.15], warm, radius: 0.002, trimPiece: true)
         }
 
         // Canopy frame.
@@ -547,7 +610,7 @@ final class CockpitScene {
         strut(from: [-0.9, 0.9, 0.4], to: [-0.6, height, 0.5])
         strut(from: [0.9, 0.9, 0.4], to: [0.6, height, 0.5])
         // Thin glowing inlay along the windscreen top.
-        box([0.86, 0.006, 0.006], [0, height - 0.03, -0.33], accent, radius: 0.002)
+        box([0.86, 0.006, 0.006], [0, height - 0.03, -0.33], accent, radius: 0.002, trimPiece: true)
 
         // Interior fill light so the cockpit is readable in deep space.
         let fill = PointLight()
