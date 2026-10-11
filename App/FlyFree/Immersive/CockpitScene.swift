@@ -39,6 +39,9 @@ final class CockpitScene {
     private var gateStyles: [Int: GateStyle] = [:]
 
     private var plates: [FlyFreeCore.Chirality: HandPlate] = [:]
+    /// Spinning rotor blades visible from the cockpit (multirotors), with their actuator index.
+    private var rotorBlades: [(blades: Entity, actuator: Int)] = []
+    private var lastSpinClock: Double?
     private let attitude = AttitudeHologram()
     private let thrusters: ThrusterHologram
     private let score = ScoreHologram()
@@ -61,8 +64,12 @@ final class CockpitScene {
             buildSky()
             buildField()
         case .earth:
-            buildEarth()
+            buildEarth(airfield: true)
+        case .city:
+            buildEarth(airfield: false)
+            buildCity()
         }
+        buildRotors(craft)
         buildCourse(course)
         buildFlightPathMarker()
         buildCockpit(style: craft.cockpit)
@@ -108,6 +115,7 @@ final class CockpitScene {
         updateGates(model)
         guard let telemetry = model.telemetry else { return }
 
+        spinRotors(telemetry, clock: model.clock)
         let s = telemetry.state
         speedometer.update(speed: telemetry.air?.airspeed ?? telemetry.speed)
         let q = s.orientation
@@ -257,7 +265,7 @@ final class CockpitScene {
 
     // MARK: - Earth
 
-    private func buildEarth() {
+    private func buildEarth(airfield: Bool) {
         var rng = SeededRandom(seed: 1903)
 
         // Sky dome and horizon haze.
@@ -291,7 +299,7 @@ final class CockpitScene {
         ground.addChild(ModelEntity(mesh: .generatePlane(width: 26000, depth: 26000), materials: [grass]))
         world.addChild(ground)
 
-        buildRunway()
+        if airfield { buildRunway() }
 
         // Mountains ringing the valley.
         let rockTones: [UIColor] = [UIColor(red: 0.42, green: 0.4, blue: 0.36, alpha: 1), UIColor(red: 0.36, green: 0.42, blue: 0.32, alpha: 1)]
@@ -315,11 +323,12 @@ final class CockpitScene {
         }
 
         // Ground clutter — trees, rocks, buildings — repeating around the craft: speed cues low down.
+        // (The city has its own streets and buildings instead.)
         let tree = PhysicallyBasedMaterial.make(UIColor(red: 0.16, green: 0.3, blue: 0.14, alpha: 1), roughness: 1)
         let stone = PhysicallyBasedMaterial.make(UIColor(white: 0.5, alpha: 1), roughness: 0.9)
         let roof = PhysicallyBasedMaterial.make(UIColor(red: 0.55, green: 0.3, blue: 0.22, alpha: 1), roughness: 0.8)
         let sphere = MeshResource.generateSphere(radius: 1), cube = MeshResource.generateBox(size: 1)
-        for i in 0..<420 {
+        for i in 0..<(airfield ? 420 : 0) {
             let e = Entity()
             switch i % 6 {
             case 0, 1, 2, 3:
@@ -393,6 +402,192 @@ final class CockpitScene {
                 lamp.position = [x, 0.4, 200 - Float(i) * 60]
                 world.addChild(lamp)
             }
+        }
+    }
+
+    // MARK: - City
+
+    /// A procedural city on a 100 m street grid: towers in every block (taller downtown), a park,
+    /// and a helipad on the intersection at the origin. Gates hang over the streets.
+    private func buildCity() {
+        var rng = SeededRandom(seed: 2027)
+        let span = 4  // blocks −4…3 on each axis → about 800 m across
+
+        let pavement = PhysicallyBasedMaterial.make(UIColor(red: 0.42, green: 0.42, blue: 0.4, alpha: 1), roughness: 0.95)
+        let asphalt = PhysicallyBasedMaterial.make(UIColor(red: 0.16, green: 0.16, blue: 0.17, alpha: 1), roughness: 0.9)
+        let paint = PhysicallyBasedMaterial.make(UIColor(red: 0.9, green: 0.85, blue: 0.6, alpha: 1), roughness: 0.6)
+        let extent = Float(span * 2 * 100 + 40)
+
+        let plaza = ModelEntity(mesh: .generateBox(size: [extent, 0.04, extent]), materials: [pavement])
+        plaza.position = [-50, 0.02, -50]
+        world.addChild(plaza)
+
+        // Streets every 100 m with centre-line dashes.
+        let dash = MeshResource.generateBox(size: [0.4, 0.02, 4])
+        for k in -span...span {
+            let c = Float(k * 100)
+            for vertical in [true, false] {
+                let road = ModelEntity(mesh: .generateBox(size: vertical ? [20, 0.05, extent] : [extent, 0.05, 20]), materials: [asphalt])
+                road.position = vertical ? [c, 0.05, -50] : [-50, 0.05, c]
+                world.addChild(road)
+                for d in stride(from: -extent / 2, to: extent / 2, by: 12) {
+                    let m = ModelEntity(mesh: dash, materials: [paint])
+                    m.position = vertical ? [c, 0.08, d - 50] : [d - 50, 0.08, c]
+                    if !vertical { m.orientation = simd_quatf(angle: .pi / 2, axis: [0, 1, 0]) }
+                    world.addChild(m)
+                }
+            }
+        }
+
+        // Façade textures: a few window grids shared by every building.
+        let facades = (0..<4).compactMap { Self.facadeTexture(rows: 6 + $0 * 8, columns: 8, seed: UInt64(10 + $0)) }
+        func facade(_ height: Float, tint: UIColor) -> any RealityKit.Material {
+            var m = PhysicallyBasedMaterial()
+            let index = min(facades.count - 1, Int(height / 35))
+            if facades.indices.contains(index) {
+                m.baseColor = .init(tint: tint, texture: .init(facades[index]))
+                m.emissiveColor = .init(color: UIColor(red: 1, green: 0.9, blue: 0.7, alpha: 1), texture: .init(facades[index]))
+                m.emissiveIntensity = 0.15
+            } else {
+                m.baseColor = .init(tint: tint)
+            }
+            m.roughness = 0.4
+            m.metallic = 0.3
+            return m
+        }
+        let tints: [UIColor] = [UIColor(red: 0.75, green: 0.8, blue: 0.86, alpha: 1), UIColor(red: 0.86, green: 0.82, blue: 0.74, alpha: 1),
+                                UIColor(red: 0.6, green: 0.68, blue: 0.75, alpha: 1), UIColor(red: 0.8, green: 0.76, blue: 0.72, alpha: 1)]
+        let roof = PhysicallyBasedMaterial.make(UIColor(white: 0.3, alpha: 1), roughness: 0.9)
+        let unitBox = MeshResource.generateBox(size: 1)
+        let tree = PhysicallyBasedMaterial.make(UIColor(red: 0.2, green: 0.38, blue: 0.18, alpha: 1), roughness: 1)
+        let grass = PhysicallyBasedMaterial.make(UIColor(red: 0.3, green: 0.5, blue: 0.25, alpha: 1), roughness: 1)
+        let sphere = MeshResource.generateSphere(radius: 1)
+
+        for bx in -span..<span {
+            for bz in -span..<span {
+                let x0 = Float(bx * 100) + 10, z0 = Float(bz * 100) + 10  // block interior: x0…x0+80
+                if bx == -1, bz == 0 {
+                    // Park beside the helipad.
+                    let lawn = ModelEntity(mesh: .generateBox(size: [80, 0.1, 80]), materials: [grass])
+                    lawn.position = [x0 + 40, 0.08, z0 + 40]
+                    world.addChild(lawn)
+                    for _ in 0..<24 {
+                        let t = ModelEntity(mesh: sphere, materials: [tree])
+                        let h = 5 + rng.next() * 6
+                        t.scale = [h * 0.45, h * 0.6, h * 0.45]
+                        t.position = [x0 + 6 + rng.next() * 68, h * 0.6, z0 + 6 + rng.next() * 68]
+                        world.addChild(t)
+                    }
+                    continue
+                }
+                // Taller toward downtown (around the middle of the course).
+                let centre = simd_distance(SIMD2<Float>(Float(bx * 100 + 50), Float(bz * 100 + 50)), SIMD2<Float>(150, -150))
+                let skyline = max(0.15, 1 - centre / 500)
+                for lx in 0..<2 {
+                    for lz in 0..<2 {
+                        let w = 26 + rng.next() * 10, d = 26 + rng.next() * 10
+                        let h = 10 + (20 + rng.next() * 110) * skyline
+                        let building = ModelEntity(mesh: unitBox, materials: [facade(h, tint: tints[Int(rng.next() * 4) % 4])])
+                        building.scale = [w, h, d]
+                        building.position = [x0 + 20 + Float(lx) * 40, h / 2, z0 + 20 + Float(lz) * 40]
+                        world.addChild(building)
+                        let cap = ModelEntity(mesh: unitBox, materials: [roof])
+                        cap.scale = [w * 0.6, 2.5, d * 0.6]
+                        cap.position = [building.position.x, h + 1.25, building.position.z]
+                        world.addChild(cap)
+                    }
+                }
+            }
+        }
+
+        // Helipad on the intersection at the origin.
+        let pad = ModelEntity(mesh: .generateBox(size: [18, 0.12, 18]), materials: [asphalt])
+        pad.position = [0, 0.09, 0]
+        world.addChild(pad)
+        let marking = MeshFactory.glow(UIColor(red: 1, green: 0.95, blue: 0.85, alpha: 1))
+        let ring = ModelEntity(mesh: MeshFactory.annulus(inner: 6.5, outer: 7.1), materials: [marking])
+        ring.position = [0, 0.16, 0]
+        world.addChild(ring)
+        for (size, position) in [([0.9, 0.05, 6], [-1.8, 0.17, 0]), ([0.9, 0.05, 6], [1.8, 0.17, 0]), ([3.6, 0.05, 0.9], [0, 0.17, 0])] as [(SIMD3<Float>, SIMD3<Float>)] {
+            let bar = ModelEntity(mesh: .generateBox(size: size), materials: [marking])
+            bar.position = position
+            world.addChild(bar)
+        }
+        let padLight = MeshFactory.glow(UIColor(red: 0.3, green: 1, blue: 0.4, alpha: 1))
+        for k in 0..<12 {
+            let a = Float(k) / 12 * 2 * .pi
+            let lamp = ModelEntity(mesh: .generateSphere(radius: 0.18), materials: [padLight])
+            lamp.position = [cos(a) * 8.6, 0.25, sin(a) * 8.6]
+            world.addChild(lamp)
+        }
+    }
+
+    /// A window-grid façade texture: dark glass with randomly lit panes and a light frame.
+    private static func facadeTexture(rows: Int, columns: Int, seed: UInt64) -> TextureResource? {
+        let cell = 16, width = columns * cell, height = rows * cell
+        var rng = SeededRandom(seed: seed)
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
+        let image = renderer.image { context in
+            UIColor(white: 0.82, alpha: 1).setFill()
+            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+            for r in 0..<rows {
+                for c in 0..<columns {
+                    let lit = rng.next() < 0.18
+                    (lit ? UIColor(red: 0.95, green: 0.85, blue: 0.6, alpha: 1) : UIColor(red: 0.18, green: 0.24, blue: 0.3, alpha: 1)).setFill()
+                    context.fill(CGRect(x: c * cell + 2, y: r * cell + 3, width: cell - 4, height: cell - 6))
+                }
+            }
+        }
+        guard let cgImage = image.cgImage else { return nil }
+        return try? TextureResource(image: cgImage, options: .init(semantic: .color))
+    }
+
+    // MARK: - Rotors
+
+    /// Rotor arms, ducts and blades around the cockpit for multirotors (body frame = cockpit frame).
+    private func buildRotors(_ craft: CraftDefinition) {
+        let frame = MeshFactory.metal(0.25, roughness: 0.4)
+        let duct = MeshFactory.metal(0.12, roughness: 0.5)
+        var bladeMaterial = UnlitMaterial(color: UIColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 1))
+        bladeMaterial.blending = .transparent(opacity: 0.85)
+        for (i, actuator) in craft.actuators.enumerated() where actuator.kind == .rotor {
+            let p = actuator.position
+            let hub = pivot + SIMD3<Float>(Float(p.x), Float(p.y), Float(p.z))
+            // Arm from the cabin roof out to the hub.
+            let root = SIMD3<Float>(hub.x * 0.25, hub.y - 0.15, hub.z * 0.25)
+            let arm = ModelEntity(mesh: .generateBox(size: [0.12, simd_length(hub - root), 0.12], cornerRadius: 0.04), materials: [frame])
+            arm.position = (hub + root) / 2
+            arm.orientation = simd_quatf(from: [0, 1, 0], to: simd_normalize(hub - root))
+            cockpit.addChild(arm)
+            // Duct ring (torus around Z, laid flat) and motor.
+            let ring = ModelEntity(mesh: MeshFactory.torus(major: 1.25, minor: 0.06, segments: 48, sides: 8), materials: [duct])
+            ring.position = hub
+            ring.orientation = simd_quatf(angle: .pi / 2, axis: [1, 0, 0])
+            cockpit.addChild(ring)
+            let motor = ModelEntity(mesh: .generateBox(size: [0.26, 0.24, 0.26], cornerRadius: 0.1), materials: [frame])
+            motor.position = hub - [0, 0.08, 0]
+            cockpit.addChild(motor)
+            // Two-blade propeller.
+            let blades = Entity()
+            blades.position = hub + [0, 0.06, 0]
+            for angle: Float in [0, .pi / 2] {
+                let blade = ModelEntity(mesh: .generateBox(size: [2.3, 0.02, 0.16], cornerRadius: 0.01), materials: [bladeMaterial])
+                blade.orientation = simd_quatf(angle: angle, axis: [0, 1, 0])
+                blades.addChild(blade)
+            }
+            cockpit.addChild(blades)
+            rotorBlades.append((blades, i))
+        }
+    }
+
+    private func spinRotors(_ telemetry: FlightTelemetry, clock: Double) {
+        guard !rotorBlades.isEmpty else { return }
+        let dt = Float(lastSpinClock.map { clock - $0 } ?? 0)
+        lastSpinClock = clock
+        for (blades, index) in rotorBlades {
+            let command = Float(telemetry.actuatorCommands[index])
+            let spin: Float = (index % 2 == 0 ? 1 : -1) * (6 + 40 * command)  // rad/s, neighbours counter-rotate
+            blades.orientation = simd_quatf(angle: spin * dt, axis: [0, 1, 0]) * blades.orientation
         }
     }
 
@@ -536,7 +731,11 @@ final class CockpitScene {
         }
 
         // Canopy frame.
-        let height: Float = style == .fighterCanopy ? 2.0 : 2.05
+        let height: Float = switch style {
+        case .fighterCanopy: 2.0
+        case .droneBubble: 2.15
+        case .spacecraftCapsule: 2.05
+        }
         let sill: [SIMD3<Float>] = [[-0.8, 0.9, -0.8], [0.8, 0.9, -0.8], [0.9, 0.9, 0.4], [-0.9, 0.9, 0.4]]
         for i in 0..<sill.count { strut(from: sill[i], to: sill[(i + 1) % sill.count]) }
         strut(from: [-0.8, 0.9, -0.8], to: [-0.45, height, -0.35])

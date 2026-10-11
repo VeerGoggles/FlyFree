@@ -187,6 +187,24 @@ The jet runs through the same pipeline, with more physics and a fly-by-wire laye
   - snow-capped mountains and clouds;
   - the Valley Run course (five gates facing along the route).
 
+## 5b. Multirotor (the passenger drone)
+
+- **Rotors** are `rotor` actuators. Each produces lift along body up plus a reaction torque about up; its spin direction sets the torque's sign. The allocator mixes them exactly like a quadcopter mixer, with no hand-written mixing table. For small actuator groups it starts from the exact least-squares solution, because rotor yaw torque is tiny next to lift.
+- **Physics:** `Atmosphere` (gravity and air), `BodyDrag` (bluff-body drag and rotational damping), and four landing skids.
+- **Flight computer (`IntentMapper.multirotorReference`):**
+  - stick tilt sets velocity relative to the drone's heading;
+  - stick yaw sets yaw rate, with the heading target capped about 17° ahead of the drone (no wind-up);
+  - the pedal sets climb rate, and a level pedal holds altitude;
+  - releasing the stick, or closing the throttle hand, brakes to a hover;
+  - a closed stick hand brakes and turns back to the launch heading.
+
+  The velocity reference becomes a thrust vector, limited by the maximum tilt. The target attitude is the drone's heading with the rotor disc tilted onto that vector (quaternions only), and collective thrust is set along the current up axis. The controller receives this as `DesiredCraftState.bodyForce` plus an attitude target.
+- **Scene:**
+  - a procedural city on a 100 m street grid, with towers that get taller downtown and use shared generated window textures;
+  - a park and a helipad at the origin;
+  - rotor arms, ducts and spinning blades visible from the bubble cockpit;
+  - the Rooftop Run course: six gates hung over the streets.
+
 ## 6. Flight-sim direction
 
 See [`FLIGHT_MODEL.md`](FLIGHT_MODEL.md). It plans orientation changes **without** acceleration (spacecraft: decoupled, and thrust-coupled with a coupling slider) and **with** acceleration (aircraft: atmosphere, aerodynamic model, aero-surface allocation, fly-by-wire control modes), with milestones F1–F7.

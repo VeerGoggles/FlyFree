@@ -1,6 +1,6 @@
 # FlyFree ✋🚀
 
-**Fly a spacecraft or a jet with your bare hands on Apple Vision Pro.**
+**Fly a spacecraft, a jet or a passenger drone with your bare hands on Apple Vision Pro.**
 
 Hold your hands out **flat**. FlyFree fits a plane to each hand's fingers and measures how it rotates from your calibrated neutral pose.
 
@@ -28,6 +28,7 @@ That 3D hand motion becomes a *desired craft state* in the craft's current frame
 | Completion screen: time, score and best time; goes straight on to the next craft (or Retry) | |
 | **Atmospheric jet**: lift, drag and stall; control surfaces; landing gear; fly-by-wire; runway take-off; Valley Run gates | |
 | Flight-path marker showing where you're actually going | |
+| **Passenger drone**: quadcopter flown like a camera drone (tilt to move, twist to turn, pedal to climb, let go to hover) through the Rooftop Run gates in a procedural city | |
 | Speedometer with a scale on every craft (linear airspeed / logarithmic space speed) | |
 | Quaternion navigation: stick deltas apply about the ship's current axes, identically at any attitude | |
 | Hand holograms: ship attitude over the stick hand, live thrusters over the throttle hand | |

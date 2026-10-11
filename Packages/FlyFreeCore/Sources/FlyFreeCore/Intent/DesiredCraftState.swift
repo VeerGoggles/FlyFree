@@ -27,6 +27,9 @@ public struct DesiredCraftState: Sendable, Equatable {
     public var brakes = false
     /// Aircraft: only the thrust axis is velocity-controlled (lift and weight do the rest).
     public var thrustAxisOnly = false
+    /// Multirotor: the exact body force to produce (collective thrust along up), bypassing the
+    /// controller's own translation loop.
+    public var bodyForce: Vec3?
 
     public init(
         angularRate: Vec3 = .zero,

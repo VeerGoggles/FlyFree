@@ -49,6 +49,9 @@ public struct FlightController: Sendable {
         let torque = inertia * (desired.angularAcceleration + gains.rate * (targetRate - omega))
             + simd_cross(omega, inertia * omega) - airframeTorque
 
+        if let bodyForce = desired.bodyForce {
+            return Wrench(force: bodyForce, torque: torque)
+        }
         let force: Vec3
         switch desired.assist {
         case .off:

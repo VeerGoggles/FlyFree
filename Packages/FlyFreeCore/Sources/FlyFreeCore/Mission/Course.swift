@@ -30,6 +30,22 @@ public struct Course: Sendable, Equatable {
 }
 
 public enum CourseCatalog {
+    /// Six gates for the drone, hung over the city's streets (roads every 100 m) between towers,
+    /// starting from the helipad at the origin and ending back near it.
+    public static let rooftopRun: Course = {
+        let centers: [Vec3] = [
+            Vec3(0, 25, -100), Vec3(0, 45, -200), Vec3(100, 60, -200),
+            Vec3(200, 40, -200), Vec3(200, 25, -100), Vec3(100, 18, 0),
+        ]
+        var previous = Vec3(0, 10, 0)
+        var gates: [Gate] = []
+        for (i, center) in centers.enumerated() {
+            gates.append(Gate(id: i, center: center, direction: center - previous, radius: 10))
+            previous = center
+        }
+        return Course(name: "Rooftop Run", gates: gates)
+    }()
+
     /// Five airborne gates looping out from the runway, for the jet. Each gate faces along the
     /// route from the previous one.
     public static let valleyRun: Course = {

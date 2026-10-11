@@ -61,9 +61,11 @@ public struct FlightPipeline: Sendable {
         self.interpreter = PilotInputInterpreter(configuration: interpreter, calibration: calibration)
         self.mapper = IntentMapper(profile: craft.profile, assist: assist, resetAttitude: start.orientation)
         self.mapper.aircraft = craft.aircraft
+        self.mapper.multirotor = craft.multirotor
+        self.mapper.mass = craft.mass.mass
         self.controller = FlightController(gains: craft.gains, mass: craft.mass,
                                            maxForwardThrust: craft.maxForwardThrust,
-                                           maxHoldRate: craft.profile.maxAngularRate * 0.25)
+                                           maxHoldRate: craft.profile.maxAngularRate * craft.holdRateFraction)
         self.allocator = ControlAllocator(actuators: craft.actuators, weights: craft.allocationWeights)
         self.environment = environment ?? craft.environment
         self.state = start
@@ -113,6 +115,11 @@ public struct FlightPipeline: Sendable {
                 loads.worldForce += state.orientation.act(airframe.bodyForce)
                 loads.bodyTorque += airframe.bodyTorque
                 lastLift = airframe.lift
+            }
+            if let drag = craft.drag, let air = environment.air(at: state.position) {
+                let v = state.velocity - air.wind
+                loads.worldForce += -0.5 * air.density * drag.dragArea * simd_length(v) * v
+                loads.bodyTorque += -drag.angularDamping * state.angularVelocity
             }
             if let gear = craft.landingGear, let ground = environment.groundHeight {
                 let contact = gear.loads(state: state, groundHeight: ground, brakes: desired.brakes)

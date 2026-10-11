@@ -8,6 +8,8 @@ public struct Actuator: Sendable, Equatable, Identifiable {
         /// Aerodynamic control surface. Its wrench scales with dynamic pressure q̄, so its
         /// unit wrench is given *per pascal* and the allocator is told q̄ every step.
         case aeroSurface
+        /// Rotor: lift along body up plus a reaction torque about up (spin direction sets its sign).
+        case rotor
     }
 
     /// How to draw a control surface in the instruments.
@@ -57,6 +59,16 @@ public struct Actuator: Sendable, Equatable, Identifiable {
     public static func surface(id: String, momentPerPascal: Vec3, position: Vec3, visual: SurfaceVisual) -> Actuator {
         Actuator(id: id, kind: .aeroSurface, position: position, direction: BodyAxis.up, maxForce: 0,
                  priority: 1, range: -1...1, customWrench: Wrench(torque: momentPerPascal), surface: visual)
+    }
+
+    /// A rotor at `position` producing `maxThrust` along body up at full command. `spin` = +1 for
+    /// counter-clockwise rotors (seen from above), −1 for clockwise; the reaction torque about up
+    /// is `−spin · torqueRatio · thrust`, which is how a multirotor yaws.
+    public static func rotor(id: String, position: Vec3, maxThrust: Double, spin: Double, torqueRatio: Double = 0.03) -> Actuator {
+        let f = BodyAxis.up * maxThrust
+        let torque = simd_cross(position, f) + BodyAxis.up * (-spin * torqueRatio * maxThrust)
+        return Actuator(id: id, kind: .rotor, position: position, direction: BodyAxis.up, maxForce: maxThrust,
+                        priority: 0, customWrench: Wrench(force: f, torque: torque))
     }
 
     /// Body wrench produced at command = 1 (and effectiveness = 1).

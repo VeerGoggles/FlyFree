@@ -42,6 +42,7 @@ Each phase ends with something you can fly. Checked items are already in the rep
 ## Phase 3: Atmosphere (v0.4), detailed in [FLIGHT_MODEL.md](FLIGHT_MODEL.md) as milestones F1–F7
 - [x] Atmospheric jet: aerodynamics, control surfaces, landing gear, fly-by-wire, runway, Valley Run course
 - [x] Flight-path marker
+- [x] Passenger drone: rotor allocation, velocity/altitude-hold flight computer, city scene, Rooftop Run
 - [ ] F1/F2: velocity-coupling slider, flight-path marker, turn-acceleration limit, drift-kill
 - [ ] `Atmosphere` environment: density by altitude, wind, turbulence
 - [ ] Aerodynamic-surface actuators (aileron, elevator, rudder, flaps), with effectiveness that scales with dynamic pressure
@@ -51,7 +52,6 @@ Each phase ends with something you can fly. Checked items are already in the rep
 
 ## Phase 4: More craft (v0.5+)
 - [ ] Lunar lander (uniform gravity, hover and altitude hold)
-- [ ] Quadcopter (rotor actuators)
 - [ ] Community craft format (JSON or Swift package) and a craft-select gallery
 
 ## Phase 5: Beyond

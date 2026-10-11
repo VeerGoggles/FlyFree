@@ -2,6 +2,44 @@
 public enum WorldKind: String, Sendable {
     case deepSpace
     case earth
+    /// Earth physics with a city to fly through.
+    case city
+}
+
+/// Flight computer for multirotors: the stick flies velocity relative to the craft's heading
+/// (tilt to move, twist to yaw), the pedal flies climb rate, and letting go hovers in place.
+public struct MultirotorControl: Sendable, Equatable {
+    public var maxHorizontalSpeed: Double
+    public var maxClimbRate: Double
+    public var maxDescentRate: Double
+    public var maxYawRate: Double
+    /// Maximum tilt from level (rad); also caps horizontal acceleration at g·tan(tilt).
+    public var maxTilt: Double
+    /// Velocity loop gain (1/s) and altitude-hold gain (1/s).
+    public var velocityGain = 1.6
+    public var altitudeGain = 1.0
+
+    public init(maxHorizontalSpeed: Double, maxClimbRate: Double, maxDescentRate: Double,
+                maxYawRate: Double, maxTilt: Double) {
+        self.maxHorizontalSpeed = maxHorizontalSpeed
+        self.maxClimbRate = maxClimbRate
+        self.maxDescentRate = maxDescentRate
+        self.maxYawRate = maxYawRate
+        self.maxTilt = maxTilt
+    }
+}
+
+/// Bluff-body air drag and rotational damping (for craft without a lifting-wing model).
+public struct BodyDrag: Sendable, Equatable {
+    /// Drag coefficient × reference area (m²).
+    public var dragArea: Double
+    /// Rotational damping (N·m per rad/s), per body axis.
+    public var angularDamping: Vec3
+
+    public init(dragArea: Double, angularDamping: Vec3) {
+        self.dragArea = dragArea
+        self.angularDamping = angularDamping
+    }
 }
 
 /// Flight-computer settings for aircraft (fly-by-wire on top of the rate controller).
@@ -29,6 +67,8 @@ public struct AircraftControl: Sendable, Equatable {
 public enum CockpitStyle: String, Sendable {
     case spacecraftCapsule
     case fighterCanopy
+    /// Bubble canopy with a wide view, for the passenger drone.
+    case droneBubble
 }
 
 /// Everything needed to fly a craft: physical properties, actuator layout, handling, visuals.
@@ -49,6 +89,10 @@ public struct CraftDefinition: Sendable, Identifiable {
     public var aerodynamics: AerodynamicModel?
     public var landingGear: LandingGear?
     public var aircraft: AircraftControl?
+    public var multirotor: MultirotorControl?
+    public var drag: BodyDrag?
+    /// Fraction of max angular rate the attitude-hold loop may command (snappier for drones).
+    public var holdRateFraction: Double
     public var startState: RigidBodyState
     public var course: Course
     /// Speedometer dial for this craft.
@@ -64,6 +108,9 @@ public struct CraftDefinition: Sendable, Identifiable {
         aerodynamics: AerodynamicModel? = nil,
         landingGear: LandingGear? = nil,
         aircraft: AircraftControl? = nil,
+        multirotor: MultirotorControl? = nil,
+        drag: BodyDrag? = nil,
+        holdRateFraction: Double = 0.25,
         startState: RigidBodyState = .init(),
         course: Course = CourseCatalog.asteroidSlalom,
         speedGauge: GaugeScale = .spacecraft
@@ -82,6 +129,9 @@ public struct CraftDefinition: Sendable, Identifiable {
         self.aerodynamics = aerodynamics
         self.landingGear = landingGear
         self.aircraft = aircraft
+        self.multirotor = multirotor
+        self.drag = drag
+        self.holdRateFraction = holdRateFraction
         self.startState = startState
         self.course = course
         self.speedGauge = speedGauge
@@ -91,7 +141,7 @@ public struct CraftDefinition: Sendable, Identifiable {
     public var environment: any FlightEnvironment {
         switch world {
         case .deepSpace: DeepSpace()
-        case .earth: Atmosphere()
+        case .earth, .city: Atmosphere()
         }
     }
 
@@ -103,5 +153,5 @@ public struct CraftDefinition: Sendable, Identifiable {
 }
 
 public enum CraftCatalog {
-    public static let all: [CraftDefinition] = [genericSpacecraft, jet]
+    public static let all: [CraftDefinition] = [genericSpacecraft, jet, drone]
 }
