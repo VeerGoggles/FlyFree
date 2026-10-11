@@ -7,6 +7,10 @@ import UIKit
 @MainActor
 final class CockpitScene {
     let root = Entity()
+    /// Session guidance (calibration panel, hand planes). Never faded.
+    private let guide = Entity()
+    /// Cockpit + universe. Fades in after the first calibration.
+    private let flight = Entity()
     /// Fixed around the pilot.
     let cockpit = Entity()
     /// Rotates (but never translates) with the craft: infinitely distant stars and the sun.
@@ -14,21 +18,47 @@ final class CockpitScene {
     /// Rotates and translates with the craft: nearby objects for a sense of speed.
     private let world = Entity()
     private var thrusterIndicators: [ModelEntity] = []
+    private var handPaddles: [FlyFreeCore.Chirality: ModelEntity] = [:]
+    private var paddleStyles: [FlyFreeCore.Chirality: PaddleStyle] = [:]
 
     /// The point the universe pivots around — roughly a seated pilot's head.
     private let pivot = SIMD3<Float>(0, 1.2, 0)
 
     init(craft: CraftDefinition) {
-        root.addChild(sky)
-        root.addChild(world)
-        root.addChild(cockpit)
+        root.addChild(flight)
+        root.addChild(guide)
+        flight.components.set(OpacityComponent(opacity: 0))
+        flight.addChild(sky)
+        flight.addChild(world)
+        flight.addChild(cockpit)
+        buildBackdrop()
         buildSky()
         buildWorld()
         buildCockpit(style: craft.cockpit)
         buildHologram(craft: craft)
+        buildHandPaddles()
     }
 
-    func apply(_ telemetry: FlightTelemetry) {
+    func mountInCockpit(_ entity: Entity?, position: SIMD3<Float>, yaw: Float, pitch: Float) {
+        mount(entity, in: cockpit, position: position, yaw: yaw, pitch: pitch)
+    }
+
+    func mountInGuide(_ entity: Entity?, position: SIMD3<Float>, yaw: Float, pitch: Float) {
+        mount(entity, in: guide, position: position, yaw: yaw, pitch: pitch)
+    }
+
+    private func mount(_ entity: Entity?, in parent: Entity, position: SIMD3<Float>, yaw: Float, pitch: Float) {
+        guard let entity else { return }
+        entity.position = position
+        entity.orientation = simd_quatf(angle: yaw, axis: [0, 1, 0]) * simd_quatf(angle: pitch, axis: [1, 0, 0])
+        parent.addChild(entity)
+    }
+
+    func apply(_ model: AppModel) {
+        flight.components.set(OpacityComponent(opacity: model.sceneOpacity))
+        updateHandPaddles(model)
+        guard let telemetry = model.telemetry else { return }
+
         let s = telemetry.state
         let q = s.orientation
         let inverse = simd_quatf(ix: Float(-q.imag.x), iy: Float(-q.imag.y), iz: Float(-q.imag.z), r: Float(q.real))
@@ -42,6 +72,72 @@ final class CockpitScene {
         for (indicator, command) in zip(thrusterIndicators, telemetry.actuatorCommands) {
             indicator.scale = SIMD3(repeating: 0.4 + 2.2 * Float(command))
         }
+    }
+
+    // MARK: - Hand planes
+
+    private enum PaddleStyle: Equatable {
+        case waiting, ready, engaged, released, locked
+        var color: UIColor {
+            switch self {
+            case .waiting: UIColor(red: 1, green: 0.6, blue: 0.1, alpha: 1)
+            case .ready, .engaged: UIColor(red: 0.2, green: 1, blue: 0.5, alpha: 1)
+            case .released: UIColor(white: 0.6, alpha: 1)
+            case .locked: UIColor(red: 0.2, green: 0.8, blue: 1, alpha: 1)
+            }
+        }
+    }
+
+    /// A thin translucent plate on each hand's fitted plane — the "stick" the pilot is holding.
+    private func buildHandPaddles() {
+        for chirality in FlyFreeCore.Chirality.allCases {
+            let paddle = ModelEntity(mesh: .generateBox(size: [0.085, 0.003, 0.11], cornerRadius: 0.0015))
+            paddle.isEnabled = false
+            guide.addChild(paddle)
+            handPaddles[chirality] = paddle
+        }
+    }
+
+    private func updateHandPaddles(_ model: AppModel) {
+        for (chirality, paddle) in handPaddles {
+            guard let plane = model.handPlanes[chirality] else {
+                paddle.isEnabled = false
+                continue
+            }
+            paddle.isEnabled = true
+            // Float the plate just above the back of the hand.
+            let c = plane.centroid + plane.normal * 0.025
+            let q = plane.orientation
+            paddle.position = SIMD3(Float(c.x), Float(c.y), Float(c.z))
+            paddle.orientation = simd_quatf(ix: Float(q.imag.x), iy: Float(q.imag.y), iz: Float(q.imag.z), r: Float(q.real))
+
+            let style: PaddleStyle
+            if case .calibrating = model.phase {
+                let readiness = chirality == .left ? model.calibrationProgress.left : model.calibrationProgress.right
+                style = readiness == .ready ? .ready : .waiting
+            } else if chirality == model.dominantHand {
+                style = model.telemetry?.input.engaged == true ? .engaged : .released
+            } else {
+                style = model.telemetry?.input.throttleLocked == true ? .locked : .engaged
+            }
+            if paddleStyles[chirality] != style {
+                paddleStyles[chirality] = style
+                var material = UnlitMaterial(color: style.color)
+                material.blending = .transparent(opacity: 0.45)
+                paddle.model?.materials = [material]
+            }
+        }
+    }
+
+    // MARK: - Backdrop
+
+    /// An opaque inside-out sphere that hides the room once the scene has faded in.
+    private func buildBackdrop() {
+        let backdrop = ModelEntity(mesh: .generateSphere(radius: 4000),
+                                   materials: [UnlitMaterial(color: UIColor(red: 0.005, green: 0.005, blue: 0.02, alpha: 1))])
+        backdrop.scale = [-1, 1, 1]  // flip winding so the inside faces are rendered
+        backdrop.position = pivot
+        flight.addChild(backdrop)
     }
 
     // MARK: - Sky

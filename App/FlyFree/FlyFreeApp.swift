@@ -9,15 +9,15 @@ struct FlyFreeApp: App {
             HangarView()
                 .environment(model)
         }
-        .defaultSize(width: 760, height: 820)
+        .defaultSize(width: 680, height: 640)
 
+        // Mixed immersion: the session starts over passthrough so you can see your hands while
+        // calibrating, then the cockpit and an opaque universe fade in around you.
         ImmersiveSpace(id: AppModel.cockpitSpaceID) {
             CockpitImmersiveView()
                 .environment(model)
-                .onAppear { model.immersiveSpaceState = .open }
-                .onDisappear { model.immersiveSpaceState = .closed }
         }
-        .immersionStyle(selection: .constant(.full), in: .full)
+        .immersionStyle(selection: .constant(.mixed), in: .mixed)
         .upperLimbVisibility(.visible)
     }
 }

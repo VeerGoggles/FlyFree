@@ -15,7 +15,8 @@ public struct FlightTelemetry: Sendable {
 
 /// The full hands → craft pipeline:
 ///
-///     HandFrame ─► PilotInputInterpreter ─► PilotInput
+///     HandFrame ─► HandPlane (least-squares fit through the finger joints)
+///               ─► PilotInputInterpreter ─► PilotInput (relative to calibrated neutral)
 ///               ─► IntentMapper          ─► DesiredCraftState
 ///               ─► FlightController      ─► Wrench demand
 ///               ─► ControlAllocator      ─► actuator commands (+ achieved wrench)
@@ -39,18 +40,25 @@ public struct FlightPipeline: Sendable {
     public init(
         craft: CraftDefinition,
         interpreter: InterpreterConfiguration = .init(),
+        calibration: HandCalibration? = nil,
         assist: FlightAssistMode = .velocityHold,
         environment: any FlightEnvironment = DeepSpace(),
         initialState: RigidBodyState = .init()
     ) {
         self.craft = craft
-        self.interpreter = PilotInputInterpreter(configuration: interpreter)
+        self.interpreter = PilotInputInterpreter(configuration: interpreter, calibration: calibration)
         self.mapper = IntentMapper(profile: craft.profile, assist: assist)
         self.controller = FlightController(gains: craft.gains, mass: craft.mass,
-                                           maxForwardThrust: craft.maxForwardThrust)
+                                           maxForwardThrust: craft.maxForwardThrust,
+                                           maxHoldRate: craft.profile.maxAngularRate * 0.25)
         self.allocator = ControlAllocator(actuators: craft.actuators, weights: craft.allocationWeights)
         self.environment = environment
         self.state = initialState
+    }
+
+    /// Sets the neutral hand frames that all stick and lever input is measured against.
+    public mutating func calibrate(_ calibration: HandCalibration) {
+        interpreter.calibration = calibration
     }
 
     /// Advances the simulation by a rendered frame of length `dt` seconds.
@@ -66,7 +74,7 @@ public struct FlightPipeline: Sendable {
         let frameDt = dt.clamped(to: 0...0.1)
         time += frameDt
         accumulator += frameDt
-        let desired = mapper.map(input)
+        let desired = mapper.map(input, state: state)
 
         var demand = Wrench.zero
         var achieved = allocator.achievedWrench

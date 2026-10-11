@@ -55,15 +55,23 @@ import simd
         #expect(telemetry.speed < 0.5)
     }
 
-    @Test func handsDriveTheWholePipeline() {
-        var pipeline = FlightPipeline(craft: craft)
-        let fist: [Finger: Double] = [.index: 0.9, .middle: 0.9, .ring: 0.9, .little: 0.9]
-        let neutral = SyntheticHand.make(chirality: .right, curl: fist)
-        _ = pipeline.step(left: nil, right: neutral, dt: 1 / 90)
-        let rolled = SyntheticHand.make(chirality: .right, orientation: Quat(angle: 0.5, axis: Vec3(0, 0, 1)), curl: fist)
-        var telemetry = pipeline.step(left: nil, right: rolled, dt: 1 / 90)
-        for _ in 0..<90 { telemetry = pipeline.step(left: nil, right: rolled, dt: 1 / 90) }
+    @Test func releasedStickHoldsAttitudeAgainstADisturbance() {
+        var pipeline = FlightPipeline(craft: craft, assist: .off)
+        _ = pipeline.step(input: .neutral, dt: 1 / 90)
+        pipeline.state.angularVelocity = Vec3(0, 0.2, 0)  // a knock
+        for _ in 0..<(90 * 8) { _ = pipeline.step(input: .neutral, dt: 1 / 90) }
+        let drift = HandMetrics.rotationVector(current: pipeline.state.orientation, neutral: Quat(ix: 0, iy: 0, iz: 0, r: 1))
+        #expect(simd_length(drift) < 0.01)
+    }
+
+    @Test func flatHandsDriveTheWholePipeline() {
+        var pipeline = FlightPipeline(craft: craft, calibration: .identity)
+        let left = SyntheticHand.make(chirality: .left, position: Vec3(-0.2, 1, -0.35))
+        // Forearm rotated thumb-up → roll right (negative Z).
+        let right = SyntheticHand.make(chirality: .right, orientation: Quat(angle: -0.5, axis: Vec3(0, 0, 1)), position: Vec3(0.2, 1, -0.35))
+        var telemetry = pipeline.step(left: left, right: right, dt: 1 / 90)
+        for _ in 0..<90 { telemetry = pipeline.step(left: left, right: right, dt: 1 / 90) }
         #expect(telemetry.input.engaged)
-        #expect(telemetry.state.angularVelocity.z > 0.3)
+        #expect(telemetry.state.angularVelocity.z < -0.3)
     }
 }

@@ -5,7 +5,11 @@ Each phase ends with something you can fly. Checked items are already in the rep
 ## Phase 0: Foundation (v0.1) ✅
 - [x] `FlyFreeCore` pipeline: hands → input → intent → control → allocation → physics
 - [x] Generic spacecraft in deep space: 2 main engines, 14 RCS thrusters
-- [x] Grip-to-engage stick, recentered on each grip; finger-curl throttle
+- [x] Flat-hand stick from a fitted finger plane, with rotation-vector mapping
+- [x] Hands-out-flat calibration, then the cockpit and space fade in
+- [x] Flat-hand lever throttle (forward and reverse, close to lock); finger-curl alternative
+- [x] Rate-command / attitude-hold in the craft's frame
+- [x] In-scene dashboard (Recenter, Reset, Land); hangar hidden during flight
 - [x] Velocity-hold and Newtonian flight assist
 - [x] Generic bounded least-squares thrust allocator
 - [x] Procedural cockpit, starfield, asteroids, gate course, thruster hologram, HUD
@@ -14,7 +18,8 @@ Each phase ends with something you can fly. Checked items are already in the rep
 
 ## Phase 1: Feel and feedback (v0.2)
 - [ ] On-device tuning pass: thresholds, full-deflection angles, filter cutoffs, expo
-- [ ] Calibration flow: open and fist per hand, fixed-neutral option, saved per user
+- [ ] Ghost-hand guides showing where to hold your hands during calibration
+- [ ] Per-user curl calibration and saved neutral poses
 - [ ] Visual stick and throttle "ghost" gauges near the hands
 - [ ] Spatial audio: engine rumble scaled to thrust, RCS puffs, engage and release clicks
 - [ ] Comfort: optional vignette during fast rotation, a stable cockpit frame, reduced-motion mode

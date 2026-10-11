@@ -2,12 +2,14 @@ import FlyFreeCore
 import Observation
 import SwiftUI
 
-/// App-wide state: settings chosen in the hangar, the active flight pipeline, and telemetry.
+/// App-wide state: settings chosen in the hangar, the session phase, the active flight
+/// pipeline, and the latest telemetry.
 @MainActor
 @Observable
 final class AppModel {
     static let hangarWindowID = "hangar"
     static let cockpitSpaceID = "cockpit"
+    static let fadeInDuration = 2.5
 
     enum ImmersiveSpaceState { case closed, inTransition, open }
 
@@ -17,11 +19,19 @@ final class AppModel {
         var id: String { rawValue }
     }
 
+    /// A flight session: hold hands out flat → cockpit fades in → fly. Recenter returns to
+    /// calibration without fading the cockpit out.
+    enum Phase: Equatable {
+        case calibrating(initial: Bool)
+        case fadingIn(start: Double)
+        case flying
+    }
+
     // MARK: Settings
 
     var craft: CraftDefinition = CraftCatalog.genericSpacecraft
     var dominantHand: FlyFreeCore.Chirality = .right
-    var attitudeMode: AttitudeInputMode = .palm
+    var throttleMode: ThrottleInputMode = .lever
     var flightAssist: FlightAssistMode = .velocityHold
     var invertPitch = false
     #if targetEnvironment(simulator)
@@ -35,33 +45,83 @@ final class AppModel {
     var immersiveSpaceState = ImmersiveSpaceState.closed
     var simulatedHands = SimulatedHands()
     let handTracking = HandTrackingService()
+    private(set) var phase = Phase.calibrating(initial: true)
+    private(set) var calibrationProgress = CalibrationProgress(left: .notDetected, right: .notDetected, fraction: 0)
+    private(set) var handPlanes: [FlyFreeCore.Chirality: HandPlane] = [:]
+    /// Opacity of the cockpit + universe (0 during the first calibration).
+    private(set) var sceneOpacity: Float = 0
     private(set) var pipeline: FlightPipeline
     private(set) var telemetry: FlightTelemetry?
+
+    private var calibrationSession = CalibrationSession()
+    private var calibration: HandCalibration?
+    private var clock = 0.0
 
     init() {
         pipeline = FlightPipeline(craft: CraftCatalog.genericSpacecraft)
     }
 
-    /// Rebuilds the pipeline from current settings and puts the craft back at the origin.
+    /// Starts a new session at the hands-out calibration step.
+    func beginSession() {
+        calibration = nil
+        calibrationSession.reset()
+        simulatedHands = SimulatedHands()
+        phase = .calibrating(initial: true)
+        sceneOpacity = 0
+        resetFlight()
+    }
+
+    /// Puts the craft back at the start, keeping the current hand calibration.
     func resetFlight() {
         var config = InterpreterConfiguration()
         config.dominantHand = dominantHand
-        config.attitudeMode = attitudeMode
+        config.throttleMode = throttleMode
         var craft = craft
         craft.profile.invertPitch = invertPitch
-        pipeline = FlightPipeline(craft: craft, interpreter: config, assist: flightAssist)
+        pipeline = FlightPipeline(craft: craft, interpreter: config, calibration: calibration, assist: flightAssist)
         telemetry = nil
+    }
+
+    /// Re-captures the neutral flat-hand pose. The craft holds attitude meanwhile.
+    func recenter() {
+        calibrationSession.reset()
+        phase = .calibrating(initial: false)
+    }
+
+    /// Leaves a recenter without changing the existing calibration.
+    func cancelRecenter() {
+        guard case .calibrating(initial: false) = phase else { return }
+        phase = .flying
     }
 
     /// Called once per rendered frame from the immersive scene.
     func tick(dt: Double) {
+        clock += dt
         let hands: (left: HandFrame?, right: HandFrame?)
         switch inputSource {
-        case .handTracking:
-            hands = handTracking.latestHands()
-        case .simulated:
-            hands = simulatedHands.frames(dominant: dominantHand, attitudeMode: attitudeMode)
+        case .handTracking: hands = handTracking.latestHands()
+        case .simulated: hands = simulatedHands.frames(dominant: dominantHand)
         }
-        telemetry = pipeline.step(left: hands.left, right: hands.right, dt: dt)
+        var planes: [FlyFreeCore.Chirality: HandPlane] = [:]
+        planes[.left] = hands.left.flatMap(HandMetrics.plane)
+        planes[.right] = hands.right.flatMap(HandMetrics.plane)
+        handPlanes = planes
+
+        switch phase {
+        case .calibrating(let initial):
+            calibrationProgress = calibrationSession.update(left: hands.left, right: hands.right, time: clock)
+            if let result = calibrationProgress.result {
+                calibration = result
+                pipeline.calibrate(result)
+                phase = initial ? .fadingIn(start: clock) : .flying
+            }
+        case .fadingIn(let start):
+            sceneOpacity = Float(min(1, (clock - start) / Self.fadeInDuration))
+            if sceneOpacity >= 1 { phase = .flying }
+            telemetry = pipeline.step(left: hands.left, right: hands.right, dt: dt)
+        case .flying:
+            sceneOpacity = 1
+            telemetry = pipeline.step(left: hands.left, right: hands.right, dt: dt)
+        }
     }
 }

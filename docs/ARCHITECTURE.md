@@ -4,22 +4,30 @@ This document sets the **scale and direction** of FlyFree. It is meant to change
 
 ## 1. Product in one sentence
 
-A visionOS app where you sit in the cockpit of a craft you chose, and fly it with your bare hands. Your dominant hand is a virtual stick for attitude. Your other hand's finger curl is the throttle. Finger and hand angles become a *desired craft state*, and a craft-specific translator turns that into engine, thruster and control-surface commands.
+A visionOS app where you sit in the cockpit of a craft you chose, and fly it with your bare hands held out **flat**. A plane is fitted to each hand's fingers. The rotation of each plane relative to a calibrated neutral pose is modelled in 3D and applied in the craft's current frame of reference to produce a *desired craft state*. A craft-specific translator then turns that state into engine, thruster and control-surface commands.
+
+Your dominant hand is the stick:
+- tilting the fingertips up or down pitches the craft,
+- turning the wrist horizontally yaws it,
+- rotating the forearm rolls it.
+
+Your other hand is a throttle lever: tip it up for forward, down for reverse.
 
 ## 2. Guiding principles
 
 1. **Separate intent from mechanism.** The pilot says *what* they want (for example "pitch up at 20°/s, go 80 m/s"). Each craft decides *how* to do it. The same hands fly a spacecraft, a jet or a drone.
 2. **A pure, testable core.** Everything from hand joints to physics lives in `FlyFreeCore`. It has no ARKit, RealityKit or UI dependencies, so it runs headless on a Mac in CI.
 3. **Craft are data.** A `CraftDefinition` holds mass properties, actuator layout, handling profile, controller gains and cockpit style. New craft should rarely need new code.
-4. **Safe by default.** A dead-man grip, attitude hold when you let go, a throttle grace period on tracking loss, and comfort-first visuals.
-5. **Runs without a headset.** *Simulated Hands* feed synthetic skeletons through the real pipeline in the simulator.
+4. **Flat hands, measured as planes.** A least-squares plane through about 20 finger joints is much more robust than any single finger. A unit test shows it is clearly less sensitive to joint jitter than reading the index finger alone.
+5. **Safe by default.** A flat hand engages the stick and a closed hand releases it, with attitude hold on release. Closing the throttle hand locks cruise. Throttle has a grace period on tracking loss. Visuals are comfort-first.
+6. **Runs without a headset.** *Simulated Hands* feed synthetic skeletons through the real pipeline in the simulator.
 
 ## 3. The pipeline
 
 ```
 ┌──────────────┐  HandFrame×2   ┌──────────────────────┐  PilotInput    ┌──────────────┐
 │ Hand source  │ ─────────────► │ PilotInputInterpreter│ ─────────────► │ IntentMapper │
-│ ARKit / Sim  │  joint xyz     │ grip, neutral, 1€    │  normalized    │ ControlProfile│
+│ ARKit / Sim  │  joint xyz     │ plane fit, neutral,1€│  normalized    │ ControlProfile│
 └──────────────┘                └──────────────────────┘  -1…1, 0…1     └──────┬───────┘
                                                                               │ DesiredCraftState
                                                                               ▼ (rates, speed/thrust)
@@ -34,31 +42,47 @@ A visionOS app where you sit in the cockpit of a craft you chose, and fly it wit
 
 `FlightPipeline` ties the stages together. Input and intent run once per rendered frame (about 90 Hz). Control, allocation and physics run on a fixed 180 Hz sub-step, so flight does not depend on frame rate.
 
+### 3.0 Session flow
+1. **Hangar window:** choose the craft and options, then press **Launch**. The window closes itself.
+2. **Calibration**, in a mixed immersive space over passthrough, modelled on the Vision Pro hand setup. The prompt says *"Hold out both hands, flat."* A translucent plate floats on each hand's fitted plane. It is orange while the hand isn't ready and turns green when locked. `CalibrationSession` needs each hand to be:
+   - detected,
+   - flat: curl ≤ 0.3 and plane RMS ≤ 12 mm,
+   - palm-down: normal within about 53° of vertical,
+   - steady: under 0.5 rad/s.
+
+   Both hands must meet these for 1.5 s. The orientation averaged over that hold becomes each hand's **neutral frame**.
+3. **Fade-in:** over 2.5 s the cockpit, the universe and an opaque backdrop fade in, and the room disappears.
+4. **Flight:** **Recenter**, **Reset** and **Land** are buttons on the dashboard. Recenter repeats step 2 with the cockpit still visible. Land, or leaving with the Digital Crown, ends the space and reopens the hangar.
+
 ### 3.1 Hand source → `HandFrame`
 - **ARKit (`HandTrackingService`)** reads `HandTrackingProvider.latestAnchors` once per frame and converts each joint into world-space positions.
-- **Simulated (`SyntheticHand`)** builds skeletons from pitch, yaw, roll and curl. Unit tests use it too.
-- `HandFrame` holds only positions (wrist plus the finger chains). Any future hand source, such as gloves or a recorded replay, only has to produce `HandFrame`s.
+- **Simulated (`SyntheticHand`)** builds skeletons from pitch, yaw, roll and curl. Unit tests and the in-scene simulator panel use it.
+- `HandFrame` holds only positions, so any future hand source (gloves, recorded replays) only has to produce `HandFrame`s.
 
-### 3.2 Interpretation → `PilotInput` (normalized and craft-agnostic)
-- **Finger curl** is the sum of the joint bend angles along each finger. It is normalized to 0…1 using the per-hand `CurlCalibration`.
-- **Engage (dead-man):** the stick engages when the dominant hand's middle, ring and little finger curl rises above 0.55, and releases below 0.35. The gap between the two thresholds (hysteresis) stops it flickering.
-- **Neutral:** `captureOnEngage` by default. The pose at the moment you grip becomes center, so there is no calibration and no drift. A `fixed` neutral is available for a calibrated, real-stick feel.
-- **Attitude:** the hand basis (fingers forward, knuckle line sideways) relative to neutral, converted to pitch, yaw and roll. Full deflection is 0.6, 0.6 and 0.7 rad. Two stick styles:
-  - `palm`: the whole hand moves as a fist.
-  - `pointer`: the index finger aims and the palm rolls.
-- **Throttle:** the mean curl of the non-dominant hand's four fingers.
-- **Filtering:** a 1€ filter on every axis, for low jitter at rest and low lag in motion.
-- **Tracking loss:** losing the stick hand disengages, which means attitude hold. Losing the throttle hand holds the throttle for 0.5 s, then sets it to 0.
+### 3.2 Hand planes → `PilotInput` (normalized and craft-agnostic)
+- **`HandPlane`:** a least-squares plane through every joint of the index, middle, ring and little fingers (20 points). The normal is the smallest eigenvector of the covariance matrix. The forward direction is the knuckle → fingertip direction projected into the plane, and the lateral direction is their cross product. The result is a full orientation (X lateral, Y back-of-hand, −Z fingertips) plus an RMS residual, which measures how flat the hand is.
+- **Stick (dominant hand):** `r = log(neutral⁻¹ · current)` is a rotation vector expressed in the neutral hand frame, so its components map directly to body axes:
+  - `r.x`: the fingertips' plane tilting front-to-back → **pitch**
+  - `r.y`: horizontal wrist rotation → **yaw**
+  - `r.z`: forearm rotation → **roll**
 
-### 3.3 Intent → `DesiredCraftState`
-- `IntentMapper` applies the craft's `ControlProfile`: a deadzone, expo, and the maximum rate on each axis.
+  Each component is divided by its full deflection (0.45, 0.5 and 0.7 rad). Because the rotation is modelled as one 3D rotation rather than three independently measured angles, combined motions stay consistent.
+- **Dead-man:** the stick engages while the hand is flat (curl ≤ 0.3) and releases when it closes (curl ≥ 0.5). Authority ramps in over 0.25 s after engaging so there is no jolt.
+- **Throttle (lever, the default):** the throttle hand's plane pitch relative to its neutral pose. Fingertips up gives +1 (forward), level gives 0, down gives −1 (reverse). Closing the hand **locks** the current setting (cruise), and flattening it takes control back. *Finger curl* (open = 0, fist = 1) remains available as an alternative.
+- **Filtering:** a 1€ filter on every axis.
+- **Tracking loss:** losing the stick hand releases it (attitude hold). Losing the throttle hand holds the throttle for 0.5 s, then sets it to 0.
+
+### 3.3 Intent → `DesiredCraftState`, in the craft's current frame
+- `IntentMapper` applies the craft's `ControlProfile` (deadzone, expo, maximum rates) and works in the craft's **current body frame**.
+- **Rate-command / attitude-hold:**
+  - With the stick deflected, the desired state is a body angular rate.
+  - With the stick centered or released, the craft's attitude becomes a *target to hold* once rotation has settled. Capturing it only after settling avoids snap-back when the stick is released mid-turn.
 - **Flight assist:**
-  - `velocityHold` (default): throttle sets the desired forward speed, and lateral drift is nulled.
-  - `off`: throttle is a fraction of the main engines' thrust (pure Newtonian flight).
-- Later: attitude-hold variants, horizon-level for aircraft, and hover or altitude-hold for landers and drones.
+  - `velocityHold` (default): throttle sets the desired forward speed; negative throttle reverses at 25% of maximum speed. Lateral drift is nulled.
+  - `off`: throttle is a fraction of the main engines' thrust; negative throttle fires the retro thrusters.
 
 ### 3.4 Control → body `Wrench` demand
-- **Rotation:** rate command with a proportional gain, plus gyroscopic compensation (`τ = I·K·(ω* − ω) + ω × Iω`). A zero command holds attitude.
+- **Rotation:** `ω* = ω_cmd + clamp(K_att · log(q⁻¹ · q_target))`, then `τ = I·K_rate·(ω* − ω) + ω × Iω` (gyroscopic compensation).
 - **Translation:** `F = m·K·(v* − v)` in the body frame, or a direct thrust fraction when assist is off.
 - Later: PID with integral and anti-windup, and gain scheduling for aircraft (dynamic pressure).
 
@@ -78,6 +102,7 @@ A visionOS app where you sit in the cockpit of a craft you chose, and fly it wit
 - **Full `ImmersiveSpace`:** the pilot stays at the origin inside a procedural cockpit. visionOS does not let the app move the camera, so the universe moves by the inverse of the craft's pose:
   - a *sky* layer that only rotates (stars and the sun at infinity),
   - a *world* layer that rotates and translates (asteroids and gates, for a sense of speed).
+- **Dashboard:** Recenter, Reset and Land, mounted on the main console.
 - **HUD:** a SwiftUI attachment showing stick state, commands, rates, throttle, speed and hand-tracking status.
 - **Hologram:** a mini craft on the console, with one dot per actuator that grows with its command. It is a live view of the allocator.
 
@@ -86,7 +111,7 @@ A visionOS app where you sit in the cockpit of a craft you chose, and fly it wit
 | Area | Location | Key types |
 |---|---|---|
 | Math | `FlyFreeCore/Math` | `Vec3`, `Quat`, `Wrench`, `BodyAxis` |
-| Input | `FlyFreeCore/Input` | `HandFrame`, `HandMetrics`, `PilotInputInterpreter`, `OneEuroFilter`, `SyntheticHand` |
+| Input | `FlyFreeCore/Input` | `HandFrame`, `HandPlane`, `HandMetrics`, `CalibrationSession`, `HandCalibration`, `PilotInputInterpreter`, `OneEuroFilter`, `SyntheticHand` |
 | Intent | `FlyFreeCore/Intent` | `ControlProfile`, `AxisShaping`, `DesiredCraftState`, `IntentMapper` |
 | Control | `FlyFreeCore/Control` | `FlightController`, `ControllerGains` |
 | Allocation | `FlyFreeCore/Allocation` | `Actuator`, `ControlAllocator` |
@@ -101,14 +126,9 @@ A visionOS app where you sit in the cockpit of a craft you chose, and fly it wit
 - **Precision:** the core uses `Double`. Values are converted to `Float` only at the RealityKit boundary.
 
 ## 6. Open questions for alignment
-1. **Stick metaphor.** Should the stick be the whole fist (current default), the pointing index finger, or finger *angles only*, with the wrist ignored to reduce fatigue?
-2. **Throttle metaphor.** Curl is absolute (open = 0). Alternatives:
-   - a slide along the throttle hand's position,
-   - incremental ("ratchet") throttle,
-   - a thumb gesture for reverse or retro thrust.
-3. **Translation (RCS strafe).** Should it come from the throttle hand's position offset, or from a modifier pinch?
-4. **Neutral policy.** Should the neutral pose be re-captured on every grip (current), or set once with a calibration step?
-5. **Seated or standing pilot,** and should the cockpit scale to the user's real seated height?
-6. **Craft priority** after the spacecraft: atmospheric jet, lander, or drone?
-7. **Fidelity target:** arcade, "Kerbal-ish", or study-level?
-8. **Multiplayer and spectators:** SharePlay formation flying?
+1. **Throttle lever.** Should a level hand mean zero speed (current), or should the lever be offset so a resting hand cruises? Should the throttle hand's yaw and roll drive RCS strafing?
+2. **Pitch source.** Should it be the whole fitted plane (wrist plus finger bend), or should wrist flexion and knuckle bend be separate signals, for example a finer trim from the fingers?
+3. **Neutral re-capture.** Recenter is manual today. Should the app also recenter automatically when both hands are held flat and still with the stick released?
+4. **Seated or standing pilot,** and should the cockpit scale to the pilot's measured hand height from calibration?
+5. **Craft priority** after the spacecraft: atmospheric jet, lander, or drone?
+6. **Fidelity target:** arcade, "Kerbal-ish", or study-level?

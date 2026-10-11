@@ -8,7 +8,7 @@ struct TelemetryReadout: View {
         Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
             GridRow {
                 Text("Stick")
-                Text(telemetry.input.engaged ? "ENGAGED" : "released")
+                Text(telemetry.input.engaged ? "ENGAGED" : "released · holding")
                     .foregroundStyle(telemetry.input.engaged ? .green : .secondary)
                     .bold()
             }
@@ -16,7 +16,12 @@ struct TelemetryReadout: View {
             GridRow { Text("Rate °/s"); Text(triple(telemetry.state.angularVelocity * (180 / .pi), "%+.0f")) }
             GridRow {
                 Text("Throttle")
-                ProgressView(value: telemetry.input.throttle).frame(width: 160)
+                HStack {
+                    Text(String(format: "%+.0f%%", telemetry.input.throttle * 100))
+                    if telemetry.input.throttleLocked {
+                        Image(systemName: "lock.fill").foregroundStyle(.cyan)
+                    }
+                }
             }
             GridRow { Text("Speed"); Text(String(format: "%.1f m/s", telemetry.speed)) }
             GridRow {

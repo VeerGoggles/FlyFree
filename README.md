@@ -2,9 +2,12 @@
 
 **Fly an aircraft or spacecraft with your bare hands on Apple Vision Pro.**
 
-Your **dominant hand is the stick**: grip a virtual control stick and tilt, turn and roll your hand to pitch, yaw and roll.
-Your **other hand is the throttle**: curl your fingers to add thrust.
-FlyFree reads the angles of your fingers and hand, works out what you want the craft to do, and then works out which engines, thrusters or control surfaces will do it. You sit in a cockpit that matches the craft you picked.
+Hold your hands out **flat**. FlyFree fits a plane to each hand's fingers and measures how it rotates from your calibrated neutral pose.
+
+- **Stick hand:** fingertips up or down to pitch, turn the wrist to yaw, rotate the forearm to roll.
+- **Throttle hand:** works like a lever. Tip it up to go forward and down to reverse.
+
+That 3D hand motion becomes a *desired craft state* in the craft's current frame. A translator then works out which engines, thrusters or control surfaces will achieve it. You sit in a cockpit that matches the craft you picked; it fades in around you once your hands lock in.
 
 > 🛠 Originated at **SundAI 144**. Open source under the MIT license.
 
@@ -15,8 +18,11 @@ FlyFree reads the angles of your fingers and hand, works out what you want the c
 | Works today | Next up |
 |---|---|
 | Generic 12 t spacecraft: 2 main engines and a 14-thruster RCS, in deep space with no gravity, drag or wind | Calibration flow, RCS strafing, more craft |
-| Grip-to-engage stick that re-centers each time you grip (no calibration needed) | Atmospheric jet with aero surfaces |
-| Finger-curl throttle with a grace period if tracking drops out | Haptic and audio cues |
+| Flat-hand stick from a plane fitted to about 20 finger joints | Atmospheric jet with aero surfaces |
+| "Hold out both hands, flat" calibration, then the cockpit and space fade in | Haptic and audio cues |
+| Flat-hand throttle lever: forward, reverse, and close the hand to lock cruise | |
+| Rate-command / attitude-hold control in the craft's own frame | |
+| Hangar window hides during flight; Land, Reset and Recenter are on the dashboard | |
 | Velocity-hold flight assist, or fully Newtonian flight | Comfort options (vignette, horizon cues) |
 | Generic thrust allocator that works for any thruster layout | |
 | Procedural cockpit, starfield, asteroids and a gate course | |
@@ -45,8 +51,8 @@ cd FlyFree
 open FlyFree.xcodeproj          # or: brew install xcodegen && xcodegen generate
 ```
 
-- **Simulator:** pick an Apple Vision Pro simulator and Run. Input defaults to *Simulated Hands*: toggle **Grip stick**, then move the sliders.
-- **Device:** set your signing team, then Run. Allow hand tracking when asked. Press **Launch**, make a fist with your dominant hand, and fly.
+- **Simulator:** pick an Apple Vision Pro simulator and Run. Input defaults to *Simulated Hands*, so calibration completes on its own; use the sliders panel to the right of the cockpit. Passing the launch argument `-FlyFreeAutoLaunch` skips the hangar.
+- **Device:** set your signing team, then Run. Allow hand tracking when asked. Press **Launch**, hold both hands out flat until they lock in, and fly.
 
 Run the core tests (they run on a Mac, no headset needed):
 
@@ -56,16 +62,17 @@ cd Packages/FlyFreeCore && swift test
 
 ## Controls
 
-| Hand | Gesture | Effect |
+| Hand | Motion | Effect |
 |---|---|---|
-| Dominant | Make a fist (middle, ring and little fingers curled) | Engage the stick; this pose becomes center |
-| Dominant | Tilt knuckles up or down | Pitch |
-| Dominant | Turn hand left or right | Yaw |
-| Dominant | Rotate the wrist | Roll |
-| Dominant | Open hand | Release; the craft holds its attitude |
-| Other | Curl fingers, from open to fist | Throttle 0 → 100% (target speed in velocity-hold mode) |
+| Both | Hold out flat, palms down, and keep still for 1.5 s | Calibrate the neutral pose; the cockpit fades in |
+| Stick | Tip fingertips up or down (the plane's front-to-back angle) | Pitch |
+| Stick | Turn the wrist horizontally | Yaw |
+| Stick | Rotate the forearm | Roll |
+| Stick | Close the hand | Release the stick; the craft holds its attitude |
+| Throttle | Tip fingertips up / level / down | Forward / stop / reverse (target speed in velocity-hold mode) |
+| Throttle | Close the hand | Lock cruise; flatten to take control back |
 
-*Finger pointer* stick style: grip with your middle, ring and little fingers, and point the index finger to aim pitch and yaw.
+Dashboard buttons: **Recenter** (re-calibrate), **Reset** (back to start), **Land** (return to the hangar).
 
 ## Repo layout
 
