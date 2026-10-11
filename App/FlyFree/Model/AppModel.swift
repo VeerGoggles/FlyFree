@@ -83,15 +83,28 @@ final class AppModel {
         return max(0, Self.autoAdvanceDelay - (clock - finish))
     }
 
-    /// Goes straight to the next craft's simulation in the same immersive space — no landing,
-    /// no hangar, and no re-calibration (the neutral hand pose carries over).
+    /// Goes straight to the next craft's simulation in the same immersive space — no landing and
+    /// no hangar. The pilot first takes up the new craft's starting hand pose (a quick
+    /// calibration), then its scene fades in.
     func startNextSimulation() {
         craft = nextCraft
         resetFlight()
+        // Each simulation starts in its own hand pose: recalibrate before its scene fades in.
+        calibrationSession = makeCalibrationSession()
+        phase = .calibrating(initial: true)
         sceneOpacity = 0
-        phase = calibration == nil ? .calibrating(initial: true) : .fadingIn(start: clock)
         sceneID += 1
     }
+
+    /// Target hand pose per physical hand for the current craft and handedness.
+    var targetPoses: [FlyFreeCore.Chirality: HandPose] {
+        craft.startingPose.poses(dominant: dominantHand)
+    }
+
+    private func makeCalibrationSession() -> CalibrationSession {
+        CalibrationSession(pose: craft.startingPose, dominant: dominantHand)
+    }
+
 
     private var calibrationSession = CalibrationSession()
     private var calibration: HandCalibration?
@@ -103,7 +116,7 @@ final class AppModel {
     /// Starts a new session at the hands-out calibration step.
     func beginSession() {
         calibration = nil
-        calibrationSession.reset()
+        calibrationSession = makeCalibrationSession()
         simulatedHands = SimulatedHands()
         phase = .calibrating(initial: true)
         sceneOpacity = 0
@@ -143,7 +156,7 @@ final class AppModel {
         let hands: (left: HandFrame?, right: HandFrame?)
         switch inputSource {
         case .handTracking: hands = handTracking.latestHands()
-        case .simulated: hands = simulatedHands.frames(dominant: dominantHand)
+        case .simulated: hands = simulatedHands.frames(dominant: dominantHand, poses: targetPoses)
         }
         var planes: [FlyFreeCore.Chirality: HandPlane] = [:]
         planes[.left] = hands.left.flatMap(HandMetrics.plane)

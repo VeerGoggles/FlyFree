@@ -76,7 +76,7 @@ cd Packages/FlyFreeCore && swift test
 
 | Hand | Motion | Effect |
 |---|---|---|
-| Both | Hold out flat, palms down, and keep still for 1.5 s | Calibrate the neutral pose; the cockpit fades in |
+| Both | Match the craft's starting pose (outlines float on your hands) and keep still for 1.5 s | Calibrate the neutral pose; the cockpit fades in |
 | Stick | Tip fingertips up or down (the plane's front-to-back angle) | Pitch (exponential response: fine near center, full rate at 90°) |
 | Stick | Turn the wrist horizontally | Yaw |
 | Stick | Rotate the forearm | Roll |
@@ -85,6 +85,16 @@ cd Packages/FlyFreeCore && swift test
 | Throttle | Hold level | Keep current speed |
 | Throttle | Tip fingertips up | Brake, then reverse |
 | Throttle | Close the hand | Brake to a full stop (12 m/s²) |
+
+Starting poses (shown for a right-handed pilot; mirrored for left-handed):
+
+| Craft | Stick hand (right) | Throttle hand (left) |
+|---|---|---|
+| Spacecraft | Flat, palm down, fingers forward | Flat, palm down, fingers forward |
+| Jet | Up: thumb up, palm facing in, as if gripping a stick | Down: flat, palm down, on the throttle |
+| Drone | Thumb up, palm facing in | Thumb up, palm facing in (like holding a controller) |
+
+Whatever the starting pose, motions are read in your own frame: tipping the fingertips forward or down is always pitch (or the pedal), turning the wrist about vertical is always yaw, and rolling the forearm is always roll.
 
 Dashboard buttons: **Recenter** (re-calibrate), **Reset** (back to start), **Land** (return to the hangar).
 

@@ -87,7 +87,7 @@ private func jittered(_ frame: HandFrame, amplitude: Double, seed: UInt64) -> Ha
         var session = CalibrationSession()
         #expect(session.update(left: nil, right: hand(.right), time: 0).left == .notDetected)
         #expect(session.update(left: hand(.left, curl: fist), right: hand(.right), time: 0.01).left == .notFlat)
-        #expect(session.update(left: hand(.left, roll: 1.4), right: hand(.right), time: 0.02).left == .notLevel)
+        #expect(session.update(left: hand(.left, roll: 1.4), right: hand(.right), time: 0.02).left == .wrongPose)
         _ = session.update(left: hand(.left), right: hand(.right), time: 0.03)
         let moving = session.update(left: hand(.left, yaw: 0.2), right: hand(.right), time: 0.04)
         #expect(moving.left == .moving)

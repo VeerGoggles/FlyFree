@@ -1,4 +1,5 @@
 import Foundation
+import simd
 
 /// Per-hand open/closed flexion range used to normalize finger curl to 0...1.
 public struct CurlCalibration: Sendable, Equatable {
@@ -88,7 +89,7 @@ public struct PilotInputInterpreter: Sendable {
                 }
             }
             if let start = engagedAt {
-                let rv = HandMetrics.rotationVector(current: plane.orientation, neutral: neutral)
+                let rv = HandMetrics.pilotRotationVector(current: plane.orientation, neutral: neutral)
                 let authority = c.engageRamp > 0 ? ((time - start) / c.engageRamp).clamped(to: 0...1) : 1
                 var rotation = Vec3.zero
                 for axis in 0..<3 {
@@ -118,7 +119,10 @@ public struct PilotInputInterpreter: Sendable {
                 throttleFilter.reset()
             } else {
                 // Fingertips down (negative pitch) = accelerate, like pressing a pedal.
-                let pitch = HandMetrics.twistAngle(current: plane.orientation, neutral: neutral, about: BodyAxis.right)
+                // Fingertips down/up in the pilot's frame, whatever pose the hand started in.
+                let inPilotFrame: Quat = (plane.orientation * neutral.inverse).normalized
+                let pitch = HandMetrics.twistAngle(current: inPilotFrame, neutral: Quat(ix: 0, iy: 0, iz: 0, r: 1),
+                                                   about: BodyAxis.right)
                 throttle = throttleFilter.filter((-pitch / c.throttleFullDeflection).clamped(to: -1...1), at: time)
             }
         } else {

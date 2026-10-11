@@ -204,15 +204,19 @@ struct CalibrationPanel: View {
                 Image(systemName: "hand.raised.fingers.spread.fill")
                     .font(.system(size: 44))
                     .symbolEffect(.pulse)
-                Text(initial ? "Hold out both hands, flat" : "Recenter: hands out flat")
+                Text(initial ? "\(model.craft.name): get into position" : "Recenter: back into position")
                     .font(.title2.bold())
-                Text("Palms down, fingers together and pointing forward. Keep them still in a comfortable position — this becomes center for the stick and the throttle.")
+                Text("Match each hand to the outline floating on it, fingers straight, and hold still. This pose becomes center for the stick and the throttle.")
                     .font(.callout)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
-                HStack(spacing: 24) {
-                    HandStatusChip(label: "Left", readiness: model.calibrationProgress.left)
-                    HandStatusChip(label: "Right", readiness: model.calibrationProgress.right)
+                HStack(alignment: .top, spacing: 24) {
+                    HandStatusChip(label: "Left", role: model.dominantHand == .left ? "Stick" : "Throttle",
+                                   instruction: model.targetPoses[.left]?.instruction ?? "",
+                                   readiness: model.calibrationProgress.left)
+                    HandStatusChip(label: "Right", role: model.dominantHand == .right ? "Stick" : "Throttle",
+                                   instruction: model.targetPoses[.right]?.instruction ?? "",
+                                   readiness: model.calibrationProgress.right)
                 }
                 ProgressView(value: model.calibrationProgress.fraction)
                     .tint(.green)
@@ -234,26 +238,29 @@ struct CalibrationPanel: View {
 
 private struct HandStatusChip: View {
     var label: String
+    var role: String
+    var instruction: String
     var readiness: HandReadiness
 
     var body: some View {
         Label {
-            VStack(alignment: .leading) {
-                Text(label).font(.headline)
-                Text(text).font(.caption)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(label) · \(role)").font(.headline)
+                Text(instruction).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(text).font(.caption.bold())
             }
         } icon: {
             Image(systemName: readiness == .ready ? "checkmark.circle.fill" : "circle.dashed")
                 .foregroundStyle(readiness == .ready ? .green : .orange)
         }
-        .frame(width: 170, alignment: .leading)
+        .frame(width: 210, alignment: .leading)
     }
 
     private var text: String {
         switch readiness {
         case .notDetected: "Not detected"
         case .notFlat: "Flatten your hand"
-        case .notLevel: "Turn palm down"
+        case .wrongPose: "Match the outline"
         case .moving: "Hold still"
         case .ready: "Locked"
         }

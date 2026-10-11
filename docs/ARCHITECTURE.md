@@ -53,6 +53,13 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
    - steady: under 0.5 rad/s.
 
    Both hands must meet these for 1.5 s. The orientation averaged over that hold becomes each hand's **neutral frame**.
+
+  **Starting poses (`StartingPose`, defined per craft).** Each simulation defines the pose each hand starts in, by role (stick or throttle). Poses are mirrored for left-handed pilots.
+  - Spacecraft: both hands flat.
+  - Jet: stick hand vertical with the thumb up; throttle hand flat.
+  - Drone: both hands vertical, thumbs up.
+
+  Calibration only completes when each hand's plane is within about 35° of its target pose (`HandReadiness.wrongPose` otherwise), so the pilot always starts in the right state. A faint outline of the target pose floats on each hand, white until it matches and then green. The next simulation in the auto-advance cycle recalibrates into its own pose before its scene fades in.
 3. **Fade-in:** over 2.5 s the cockpit, the universe and an opaque backdrop fade in, and the room disappears.
 4. **Flight:** **Recenter**, **Reset** and **Land** are buttons on the dashboard. Recenter repeats step 2 with the cockpit still visible. Land, or leaving with the Digital Crown, ends the space and reopens the hangar.
 
@@ -63,7 +70,7 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
 
 ### 3.2 Hand planes → `PilotInput` (normalized and craft-agnostic)
 - **`HandPlane`:** a least-squares plane through every joint of the index, middle, ring and little fingers (20 points). The normal is the smallest eigenvector of the covariance matrix. The forward direction is the knuckle → fingertip direction projected into the plane, and the lateral direction is their cross product. The result is a full orientation (X lateral, Y back-of-hand, −Z fingertips) plus an RMS residual, which measures how flat the hand is.
-- **Stick (dominant hand):** `r = log(neutral⁻¹ · current)` is a rotation vector expressed in the neutral hand frame, so its components map directly to body axes:
+- **Stick (dominant hand):** `r = log(current · neutral⁻¹)` is the hand's rotation since calibration, expressed in the **pilot's frame**. It is the same whatever pose the hand started in: tilting a vertical "stick" hand forward pitches, exactly like tipping a flat hand. Its components map directly to body axes:
   - `r.x`: the fingertips' plane tilting front-to-back → **pitch**
   - `r.y`: horizontal wrist rotation → **yaw**
   - `r.z`: forearm rotation → **roll**

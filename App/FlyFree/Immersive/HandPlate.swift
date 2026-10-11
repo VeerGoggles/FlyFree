@@ -8,6 +8,8 @@ import UIKit
 final class HandPlate {
     enum Style: Equatable {
         case waiting, ready, engaged, released, resetting, braking
+        /// The outline of the pose to match (calibration): white until matched, then green.
+        case target(matched: Bool)
 
         var color: UIColor {
             switch self {
@@ -16,7 +18,14 @@ final class HandPlate {
             case .released: UIColor(white: 0.65, alpha: 1)
             case .resetting: .holoViolet
             case .braking: .holoRed
+            case .target(let matched): matched ? .holoGreen : .white
             }
+        }
+
+        /// Ghost outlines are drawn fainter than the live plate.
+        var strength: Float {
+            if case .target = self { return 0.45 }
+            return 1
         }
     }
 
@@ -77,9 +86,10 @@ final class HandPlate {
         guard self.style != style else { return }
         self.style = style
         let color = style.color
-        rim.model?.materials = [MeshFactory.glow(color, opacity: 0.95)]
-        halo.model?.materials = [MeshFactory.glow(color, opacity: 0.22)]
-        fill.model?.materials = [MeshFactory.glow(color, opacity: 0.08)]
-        for m in marks { m.model?.materials = [MeshFactory.glow(color, opacity: 0.8)] }
+        let k = style.strength
+        rim.model?.materials = [MeshFactory.glow(color, opacity: 0.95 * k)]
+        halo.model?.materials = [MeshFactory.glow(color, opacity: 0.22 * k)]
+        fill.model?.materials = [MeshFactory.glow(color, opacity: 0.08 * k)]
+        for m in marks { m.model?.materials = [MeshFactory.glow(color, opacity: 0.8 * k)] }
     }
 }

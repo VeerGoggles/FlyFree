@@ -97,6 +97,8 @@ public struct CraftDefinition: Sendable, Identifiable {
     public var course: Course
     /// Speedometer dial for this craft.
     public var speedGauge: GaugeScale
+    /// Hand poses the pilot starts (and calibrates) in.
+    public var startingPose: StartingPose
 
     public init(
         id: String, name: String, summary: String,
@@ -113,7 +115,8 @@ public struct CraftDefinition: Sendable, Identifiable {
         holdRateFraction: Double = 0.25,
         startState: RigidBodyState = .init(),
         course: Course = CourseCatalog.asteroidSlalom,
-        speedGauge: GaugeScale = .spacecraft
+        speedGauge: GaugeScale = .spacecraft,
+        startingPose: StartingPose = .bothFlat
     ) {
         self.id = id
         self.name = name
@@ -135,6 +138,7 @@ public struct CraftDefinition: Sendable, Identifiable {
         self.startState = startState
         self.course = course
         self.speedGauge = speedGauge
+        self.startingPose = startingPose
     }
 
     /// The physics environment this craft is designed for.

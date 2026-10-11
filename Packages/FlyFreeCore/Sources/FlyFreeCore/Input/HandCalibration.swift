@@ -23,7 +23,7 @@ public struct HandCalibration: Sendable, Equatable {
 public enum HandReadiness: String, Sendable {
     case notDetected
     case notFlat      // fingers curled or spread out of plane
-    case notLevel     // palm not facing down
+    case wrongPose    // hand not in this simulation's starting pose
     case moving
     case ready
 }
@@ -50,8 +50,6 @@ public struct CalibrationSession: Sendable {
         public var holdDuration = 1.5
         public var maxCurl = 0.3
         public var maxResidual = 0.012
-        /// Minimum dot(palm normal, world up). 0.6 ≈ within 53° of level.
-        public var minLevel = 0.6
         /// Max hand angular speed (rad/s) to count as steady.
         public var maxAngularSpeed = 0.5
         public init() {}
@@ -59,15 +57,21 @@ public struct CalibrationSession: Sendable {
 
     public var requirements: Requirements
     public var curlCalibration: CurlCalibration
+    /// Target pose per hand; nil = flat, palm down.
+    public var poses: [Chirality: HandPose]
+    public var poseTolerance: Double
 
     private var holdStart: Double?
     private var sums: [Chirality: SIMD4<Double>] = [:]
     private var previous: [Chirality: (Quat, Double)] = [:]
     private var result: HandCalibration?
 
-    public init(requirements: Requirements = .init(), curlCalibration: CurlCalibration = .init()) {
+    public init(requirements: Requirements = .init(), curlCalibration: CurlCalibration = .init(),
+                pose: StartingPose = .bothFlat, dominant: Chirality = .right) {
         self.requirements = requirements
         self.curlCalibration = curlCalibration
+        self.poses = pose.poses(dominant: dominant)
+        self.poseTolerance = pose.tolerance
     }
 
     public mutating func reset() {
@@ -114,7 +118,10 @@ public struct CalibrationSession: Sendable {
             || plane.rmsResidual > requirements.maxResidual {
             return .notFlat
         }
-        if plane.normal.y < requirements.minLevel { return .notLevel }
+        let target = (poses[chirality] ?? .flat).orientation(for: chirality)
+        if simd_length(HandMetrics.rotationVector(current: plane.orientation, neutral: target)) > poseTolerance {
+            return .wrongPose
+        }
         if let (q, t) = previous[chirality], time > t {
             let speed = simd_length(HandMetrics.rotationVector(current: plane.orientation, neutral: q)) / (time - t)
             if speed > requirements.maxAngularSpeed { return .moving }

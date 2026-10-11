@@ -12,6 +12,12 @@ public struct HandPlane: Sendable, Equatable {
     /// RMS distance of the joints from the plane (m). ~2–5 mm flat, 15 mm+ curled.
     public var rmsResidual: Double
 
+    public init(centroid: Vec3, orientation: Quat, rmsResidual: Double) {
+        self.centroid = centroid
+        self.orientation = orientation
+        self.rmsResidual = rmsResidual
+    }
+
     public var normal: Vec3 { orientation.act(BodyAxis.up) }
     public var forward: Vec3 { orientation.act(BodyAxis.forward) }
 }
@@ -84,6 +90,13 @@ public enum HandMetrics {
         let angle = rel.angle
         guard angle > 1e-9 else { return .zero }
         return rel.axis * angle
+    }
+
+    /// Rotation from `neutral` to `current` as a rotation vector in the **pilot's frame**
+    /// (+X right, +Y up, −Z forward), whatever pose the hand started in. Tilting a vertical
+    /// "stick" hand forward is a rotation about +X, exactly like tipping a flat hand.
+    public static func pilotRotationVector(current: Quat, neutral: Quat) -> Vec3 {
+        rotationVector(current: (current * neutral.inverse).normalized, neutral: Quat(ix: 0, iy: 0, iz: 0, r: 1))
     }
 
     /// Signed rotation of `current` relative to `neutral` about one axis of the neutral frame,

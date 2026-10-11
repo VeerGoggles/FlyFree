@@ -39,6 +39,8 @@ final class CockpitScene {
     private var gateStyles: [Int: GateStyle] = [:]
 
     private var plates: [FlyFreeCore.Chirality: HandPlate] = [:]
+    /// Target-pose outlines shown on each hand during calibration.
+    private var ghosts: [FlyFreeCore.Chirality: HandPlate] = [:]
     /// Spinning rotor blades visible from the cockpit (multirotors), with their actuator index.
     private var rotorBlades: [(blades: Entity, actuator: Int)] = []
     private var lastSpinClock: Double?
@@ -78,6 +80,9 @@ final class CockpitScene {
             let plate = HandPlate()
             guide.addChild(plate.entity)
             plates[chirality] = plate
+            let ghost = HandPlate()
+            guide.addChild(ghost.entity)
+            ghosts[chirality] = ghost
         }
         guide.addChild(attitude.entity)
         guide.addChild(thrusters.entity)
@@ -193,6 +198,14 @@ final class CockpitScene {
                 style = input?.throttleClosed == true ? .braking : .engaged
             }
             plate.update(plane: model.handPlanes[chirality], style: style, time: model.clock)
+
+            // The pose to match, drawn on the hand (same place, target orientation).
+            var ghostPlane: HandPlane?
+            if calibrating, let actual = model.handPlanes[chirality], let pose = model.targetPoses[chirality] {
+                ghostPlane = HandPlane(centroid: actual.centroid, orientation: pose.orientation(for: chirality), rmsResidual: 0)
+            }
+            let readiness = chirality == .left ? model.calibrationProgress.left : model.calibrationProgress.right
+            ghosts[chirality]?.update(plane: ghostPlane, style: .target(matched: readiness == .ready), time: model.clock)
         }
 
         let flying = !calibrating && model.telemetry != nil
