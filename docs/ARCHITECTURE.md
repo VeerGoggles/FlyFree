@@ -116,6 +116,13 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
   - a *sky* layer that only rotates (stars and the sun at infinity),
   - a *world* layer that rotates and translates (asteroids and gates, for a sense of speed).
 - **Dashboard:** Recenter, Reset and Land, mounted on the main console.
+- **Hand plates:** holographic rings on each fitted hand plane (rim, halo, compass ticks, forward chevron). Colour shows state: amber means waiting, cyan means flying, violet means resetting, red means braking.
+- **Hand holograms**, which follow each hand:
+  - over the stick hand, a miniature ship at its true attitude relative to launch, with a level reference ring and a rotation-rate vector;
+  - over the throttle hand, the thruster layout with plumes sized by each actuator's command, and a pedal gauge.
+- **Course (`Mission/`):** `CourseTracker` detects gate passes by checking whether the craft's path crosses the gate plane in the right direction inside the ring's radius. It scores passes (streaks for in-order gates, plus a finish bonus). Gates show as pending (cyan), next (amber, pulsing), just-passed (white flash) and passed (green).
+- **Score hologram:** extruded holographic text in the upper right of the windscreen, showing score, gates and streak, with "+points" pop-ups.
+- **Environment:** a starfield in three tints, a sun with corona and light, a ringed gas giant, nebula clouds, and wrapping asteroids and space dust for speed cues.
 - **HUD:** a SwiftUI attachment showing stick state, commands, rates, throttle, speed and hand-tracking status.
 - **Hologram:** a mini craft on the console, with one dot per actuator that grows with its command. It is a live view of the allocator.
 
@@ -138,7 +145,11 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
 - **Units:** SI (m, kg, s, N, N·m, rad). The UI shows degrees.
 - **Precision:** the core uses `Double`. Values are converted to `Float` only at the RealityKit boundary.
 
-## 6. Open questions for alignment
+## 6. Flight-sim direction
+
+See [`FLIGHT_MODEL.md`](FLIGHT_MODEL.md). It plans orientation changes **without** acceleration (spacecraft: decoupled, and thrust-coupled with a coupling slider) and **with** acceleration (aircraft: atmosphere, aerodynamic model, aero-surface allocation, fly-by-wire control modes), with milestones F1–F7.
+
+## 7. Open questions for alignment
 1. **Throttle hand's other axes.** Should the throttle hand's yaw and roll drive RCS strafing?
 2. **Pitch source.** Should it be the whole fitted plane (wrist plus finger bend), or should wrist flexion and knuckle bend be separate signals, for example a finer trim from the fingers?
 3. **Neutral re-capture.** Recenter is manual today. Should the app also recenter automatically when both hands are held flat and still with the stick released?

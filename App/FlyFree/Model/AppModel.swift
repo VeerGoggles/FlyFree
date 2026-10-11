@@ -51,10 +51,14 @@ final class AppModel {
     private(set) var sceneOpacity: Float = 0
     private(set) var pipeline: FlightPipeline
     private(set) var telemetry: FlightTelemetry?
+    private(set) var course = CourseTracker(course: CourseCatalog.asteroidSlalom)
+    /// Most recent gate pass and when it happened (session clock), for score effects.
+    private(set) var lastGateEvent: (event: CourseTracker.Event, time: Double)?
+    /// Seconds since the session started.
+    private(set) var clock = 0.0
 
     private var calibrationSession = CalibrationSession()
     private var calibration: HandCalibration?
-    private var clock = 0.0
 
     init() {
         pipeline = FlightPipeline(craft: CraftCatalog.genericSpacecraft)
@@ -78,6 +82,8 @@ final class AppModel {
         craft.profile.invertPitch = invertPitch
         pipeline = FlightPipeline(craft: craft, interpreter: config, calibration: calibration, assist: flightAssist)
         telemetry = nil
+        course = CourseTracker(course: CourseCatalog.asteroidSlalom)
+        lastGateEvent = nil
     }
 
     /// Re-captures the neutral flat-hand pose. The craft holds attitude meanwhile.
@@ -116,10 +122,23 @@ final class AppModel {
         case .fadingIn(let start):
             sceneOpacity = Float(min(1, (clock - start) / Self.fadeInDuration))
             if sceneOpacity >= 1 { phase = .flying }
-            telemetry = pipeline.step(left: hands.left, right: hands.right, dt: dt)
+            fly(hands, dt: dt)
         case .flying:
             sceneOpacity = 1
-            telemetry = pipeline.step(left: hands.left, right: hands.right, dt: dt)
+            // Development aid: `-FlyFreeSimPedal <degrees>` holds the simulated pedal after calibration.
+            if inputSource == .simulated, simulatedHands.pedal == 0,
+               let pedal = UserDefaults.standard.object(forKey: "FlyFreeSimPedal") as? Double ?? Double(UserDefaults.standard.string(forKey: "FlyFreeSimPedal") ?? "") {
+                simulatedHands.pedal = pedal
+            }
+            fly(hands, dt: dt)
+        }
+    }
+
+    private func fly(_ hands: (left: HandFrame?, right: HandFrame?), dt: Double) {
+        let telemetry = pipeline.step(left: hands.left, right: hands.right, dt: dt)
+        self.telemetry = telemetry
+        for event in course.update(position: telemetry.state.position, time: clock) {
+            lastGateEvent = (event, clock)
         }
     }
 }

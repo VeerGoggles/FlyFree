@@ -24,6 +24,9 @@ That 3D hand motion becomes a *desired craft state* in the craft's current frame
 | Flat-hand throttle pedal: push down to accelerate, level to hold speed, tip up to brake | |
 | Closed hands: reset orientation (stick), brake to a stop (throttle) | |
 | Separate acceleration limits for rotation and speed; braking about 3× stronger than speeding up | |
+| Gate course with flown-through states and a holographic score | |
+| Hand holograms: ship attitude over the stick hand, live thrusters over the throttle hand | |
+| Holographic hand plates; sun, ringed planet, nebula, space dust | |
 | Rate-command / attitude-hold control in the craft's own frame | |
 | Hangar window hides during flight; Land, Reset and Recenter are on the dashboard | |
 | Velocity-hold flight assist, or fully Newtonian flight | Comfort options (vignette, horizon cues) |
@@ -32,7 +35,7 @@ That 3D hand motion becomes a *desired craft state* in the craft's current frame
 | Cockpit hologram of the craft that shows each thruster firing | |
 | **Simulated Hands** input, so the whole pipeline runs in the visionOS Simulator | |
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the design and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the plan.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the design, [`docs/FLIGHT_MODEL.md`](docs/FLIGHT_MODEL.md) for the flight-sim plan, and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the overall plan.
 
 ## How it works (one paragraph)
 

@@ -12,7 +12,7 @@ struct CockpitImmersiveView: View {
 
     var body: some View {
         RealityView { content, attachments in
-            let scene = CockpitScene(craft: model.craft)
+            let scene = CockpitScene(craft: model.craft, course: model.course.course)
             content.add(scene.root)
 
             // Flight instruments: part of the cockpit, so they fade in with it.
@@ -86,6 +86,9 @@ struct HUDView: View {
             Text(model.craft.name).font(.headline)
             if let telemetry = model.telemetry {
                 TelemetryReadout(telemetry: telemetry)
+                Text("Score \(model.course.score) · gates \(model.course.gatesPassed)/\(model.course.course.gates.count)")
+                    .font(.callout.monospacedDigit().bold())
+                    .foregroundStyle(.cyan)
                 Text("Close stick hand: reset orientation · Close throttle hand: stop")
                     .font(.caption)
                     .foregroundStyle(.secondary)

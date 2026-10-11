@@ -10,6 +10,9 @@ Each phase ends with something you can fly. Checked items are already in the rep
 - [x] Flat-hand pedal throttle (down accelerates, level holds speed, up brakes)
 - [x] Closed hands: reset orientation (stick), brake to a stop (throttle)
 - [x] Separate rotation and translation acceleration limits; low-momentum braking with feed-forward tracking
+- [x] Gate course: flown-through states, scoring, holographic score
+- [x] Hand holograms (attitude over the stick hand, thrusters over the throttle hand); holographic hand plates
+- [x] Graphics pass: tinted stars, sun, ringed planet, nebula, space dust, PBR cockpit
 - [x] Rate-command / attitude-hold in the craft's frame
 - [x] In-scene dashboard (Recenter, Reset, Land); hangar hidden during flight
 - [x] Velocity-hold and Newtonian flight assist
@@ -35,7 +38,8 @@ Each phase ends with something you can fly. Checked items are already in the rep
 - [ ] Docking target practice
 - [ ] Per-craft Reality Composer Pro cockpit assets
 
-## Phase 3: Atmosphere (v0.4)
+## Phase 3: Atmosphere (v0.4), detailed in [FLIGHT_MODEL.md](FLIGHT_MODEL.md) as milestones F1–F7
+- [ ] F1/F2: velocity-coupling slider, flight-path marker, turn-acceleration limit, drift-kill
 - [ ] `Atmosphere` environment: density by altitude, wind, turbulence
 - [ ] Aerodynamic-surface actuators (aileron, elevator, rudder, flaps), with effectiveness that scales with dynamic pressure
 - [ ] Atmospheric jet craft with a fighter canopy cockpit; horizon-level assist
