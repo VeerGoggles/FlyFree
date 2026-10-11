@@ -1,0 +1,41 @@
+name: FlyFree
+options:
+  bundleIdPrefix: io.github.flyfree
+  deploymentTarget:
+    visionOS: "2.0"
+  createIntermediateGroups: true
+packages:
+  FlyFreeCore:
+    path: Packages/FlyFreeCore
+targets:
+  FlyFree:
+    type: application
+    platform: visionOS
+    sources:
+      - App/FlyFree
+    dependencies:
+      - package: FlyFreeCore
+    info:
+      path: App/FlyFree/Info.plist
+      properties:
+        CFBundleDisplayName: FlyFree
+        NSHandsTrackingUsageDescription: FlyFree reads your hand and finger poses to fly the craft — your dominant hand is the stick, your other hand is the throttle.
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+          UIApplicationPreferredDefaultSceneSessionRole: UIWindowSceneSessionRoleApplication
+          UISceneConfigurations: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.flyfree.FlyFree
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "7"
+        CODE_SIGN_STYLE: Automatic
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+schemes:
+  FlyFree:
+    build:
+      targets:
+        FlyFree: all
+    test:
+      targets: []

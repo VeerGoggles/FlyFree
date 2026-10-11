@@ -1,0 +1,33 @@
+import FlyFreeCore
+import SwiftUI
+
+struct TelemetryReadout: View {
+    var telemetry: FlightTelemetry
+
+    var body: some View {
+        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
+            GridRow {
+                Text("Stick")
+                Text(telemetry.input.engaged ? "ENGAGED" : "released")
+                    .foregroundStyle(telemetry.input.engaged ? .green : .secondary)
+                    .bold()
+            }
+            GridRow { Text("Command P/Y/R"); Text(triple(telemetry.input.rotation, "%+.2f")) }
+            GridRow { Text("Rate °/s"); Text(triple(telemetry.state.angularVelocity * (180 / .pi), "%+.0f")) }
+            GridRow {
+                Text("Throttle")
+                ProgressView(value: telemetry.input.throttle).frame(width: 160)
+            }
+            GridRow { Text("Speed"); Text(String(format: "%.1f m/s", telemetry.speed)) }
+            GridRow {
+                Text("Hands")
+                Text("stick \(telemetry.input.dominantHandTracked ? "✓" : "✗")   throttle \(telemetry.input.throttleHandTracked ? "✓" : "✗")")
+            }
+        }
+        .font(.callout.monospacedDigit())
+    }
+
+    private func triple(_ v: Vec3, _ format: String) -> String {
+        [v.x, v.y, v.z].map { String(format: format, $0) }.joined(separator: "  ")
+    }
+}

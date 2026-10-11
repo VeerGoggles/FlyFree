@@ -1,0 +1,400 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1ACB28CD818146EC04A3D8D5 /* TelemetryReadout.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFB2942D28452FB77A672F99 /* TelemetryReadout.swift */; };
+		4D6705378498654F50969B4B /* FlyFreeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A49F94D2C31E741F5AD7733 /* FlyFreeApp.swift */; };
+		58CAFCB1B1F3000BD6FC3540 /* HandTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 309823AF53AEF4C2AC6855FB /* HandTrackingService.swift */; };
+		7C8B2F9C002853D91173179D /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5F1B34611FEC0DC19AE1EA9 /* AppModel.swift */; };
+		BEFEF1FC5305DA612A909C44 /* SimulatedHands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70108A51DFB65F0D31F8448B /* SimulatedHands.swift */; };
+		D13F9B4775888D7FB3D46CA7 /* CockpitScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B415AE50D31D601BA97F07D7 /* CockpitScene.swift */; };
+		D362C12DF5BC32EE7F97036C /* CockpitImmersiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1779D97522FB27265B155A49 /* CockpitImmersiveView.swift */; };
+		D657CE331F478A79EE5E9C2E /* HangarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6151C23B1DFEBD0A1DA059D0 /* HangarView.swift */; };
+		F1E6F3EC1656D0A22BB530F9 /* FlyFreeCore in Frameworks */ = {isa = PBXBuildFile; productRef = C5E45F894023BC43BED3403E /* FlyFreeCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0A49F94D2C31E741F5AD7733 /* FlyFreeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlyFreeApp.swift; sourceTree = "<group>"; };
+		1779D97522FB27265B155A49 /* CockpitImmersiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CockpitImmersiveView.swift; sourceTree = "<group>"; };
+		309823AF53AEF4C2AC6855FB /* HandTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTrackingService.swift; sourceTree = "<group>"; };
+		3F394BC0A1F477D602645DC0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		57DDA00698BAFD825C53567E /* FlyFree.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FlyFree.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6151C23B1DFEBD0A1DA059D0 /* HangarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HangarView.swift; sourceTree = "<group>"; };
+		70108A51DFB65F0D31F8448B /* SimulatedHands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatedHands.swift; sourceTree = "<group>"; };
+		B415AE50D31D601BA97F07D7 /* CockpitScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CockpitScene.swift; sourceTree = "<group>"; };
+		B5F1B34611FEC0DC19AE1EA9 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		BFB2942D28452FB77A672F99 /* TelemetryReadout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryReadout.swift; sourceTree = "<group>"; };
+		F55C532E50E37075F22BFC28 /* FlyFreeCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = FlyFreeCore; path = Packages/FlyFreeCore; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		521702E3CF9397F34C1DE105 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1E6F3EC1656D0A22BB530F9 /* FlyFreeCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1692BC284F790010908076D7 = {
+			isa = PBXGroup;
+			children = (
+				83D2FD9626E28FD73E670E2D /* App */,
+				40CF13CB9968CD9BF23503D9 /* Packages */,
+				ED4CEAF180CFF695B8971C97 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		40CF13CB9968CD9BF23503D9 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				F55C532E50E37075F22BFC28 /* FlyFreeCore */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		4A4225D653191D6045E7928E /* Immersive */ = {
+			isa = PBXGroup;
+			children = (
+				1779D97522FB27265B155A49 /* CockpitImmersiveView.swift */,
+				B415AE50D31D601BA97F07D7 /* CockpitScene.swift */,
+			);
+			path = Immersive;
+			sourceTree = "<group>";
+		};
+		4F45A2BEFC946825B953E585 /* FlyFree */ = {
+			isa = PBXGroup;
+			children = (
+				0A49F94D2C31E741F5AD7733 /* FlyFreeApp.swift */,
+				3F394BC0A1F477D602645DC0 /* Info.plist */,
+				4A4225D653191D6045E7928E /* Immersive */,
+				A296682CEC623B3E347B03EE /* Input */,
+				CC95856162E9D90CB6B1D88E /* Model */,
+				D7B449778FD48B97F26C409D /* Views */,
+			);
+			path = FlyFree;
+			sourceTree = "<group>";
+		};
+		83D2FD9626E28FD73E670E2D /* App */ = {
+			isa = PBXGroup;
+			children = (
+				4F45A2BEFC946825B953E585 /* FlyFree */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A296682CEC623B3E347B03EE /* Input */ = {
+			isa = PBXGroup;
+			children = (
+				309823AF53AEF4C2AC6855FB /* HandTrackingService.swift */,
+			);
+			path = Input;
+			sourceTree = "<group>";
+		};
+		CC95856162E9D90CB6B1D88E /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				B5F1B34611FEC0DC19AE1EA9 /* AppModel.swift */,
+				70108A51DFB65F0D31F8448B /* SimulatedHands.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		D7B449778FD48B97F26C409D /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				6151C23B1DFEBD0A1DA059D0 /* HangarView.swift */,
+				BFB2942D28452FB77A672F99 /* TelemetryReadout.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		ED4CEAF180CFF695B8971C97 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				57DDA00698BAFD825C53567E /* FlyFree.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B016AD5C3E7CC670AFDD6420 /* FlyFree */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D799961CB139FCEA4745D459 /* Build configuration list for PBXNativeTarget "FlyFree" */;
+			buildPhases = (
+				366D0EA241A2E3B2092DCFC1 /* Sources */,
+				521702E3CF9397F34C1DE105 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FlyFree;
+			packageProductDependencies = (
+				C5E45F894023BC43BED3403E /* FlyFreeCore */,
+			);
+			productName = FlyFree;
+			productReference = 57DDA00698BAFD825C53567E /* FlyFree.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4B74EC0CD2D3F8AA7278A0CF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					B016AD5C3E7CC670AFDD6420 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 09F75268E7B03CCEE13C4313 /* Build configuration list for PBXProject "FlyFree" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 1692BC284F790010908076D7;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				96DCF08DBE4B05479909560E /* XCLocalSwiftPackageReference "Packages/FlyFreeCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = ED4CEAF180CFF695B8971C97 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B016AD5C3E7CC670AFDD6420 /* FlyFree */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		366D0EA241A2E3B2092DCFC1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C8B2F9C002853D91173179D /* AppModel.swift in Sources */,
+				D362C12DF5BC32EE7F97036C /* CockpitImmersiveView.swift in Sources */,
+				D13F9B4775888D7FB3D46CA7 /* CockpitScene.swift in Sources */,
+				4D6705378498654F50969B4B /* FlyFreeApp.swift in Sources */,
+				58CAFCB1B1F3000BD6FC3540 /* HandTrackingService.swift in Sources */,
+				D657CE331F478A79EE5E9C2E /* HangarView.swift in Sources */,
+				BEFEF1FC5305DA612A909C44 /* SimulatedHands.swift in Sources */,
+				1ACB28CD818146EC04A3D8D5 /* TelemetryReadout.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		09C9EFD934357E1AD854D31D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = xros;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		1D33B9ABBD48AC3B386F023F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = App/FlyFree/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.flyfree.FlyFree;
+				SDKROOT = xros;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 7;
+			};
+			name = Debug;
+		};
+		3A20CCF8BC56EEAB28900CF4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = xros;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		8B1C06C7B35C6493DB0E79D0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = App/FlyFree/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.flyfree.FlyFree;
+				SDKROOT = xros;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 7;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		09F75268E7B03CCEE13C4313 /* Build configuration list for PBXProject "FlyFree" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3A20CCF8BC56EEAB28900CF4 /* Debug */,
+				09C9EFD934357E1AD854D31D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D799961CB139FCEA4745D459 /* Build configuration list for PBXNativeTarget "FlyFree" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D33B9ABBD48AC3B386F023F /* Debug */,
+				8B1C06C7B35C6493DB0E79D0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		96DCF08DBE4B05479909560E /* XCLocalSwiftPackageReference "Packages/FlyFreeCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/FlyFreeCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C5E45F894023BC43BED3403E /* FlyFreeCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlyFreeCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 4B74EC0CD2D3F8AA7278A0CF /* Project object */;
+}
