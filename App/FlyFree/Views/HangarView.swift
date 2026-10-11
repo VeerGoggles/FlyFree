@@ -37,6 +37,10 @@ struct HangarView: View {
                         Text("Right").tag(FlyFreeCore.Chirality.right)
                         Text("Left").tag(FlyFreeCore.Chirality.left)
                     }
+                    Picker("Stick frame", selection: $model.controlFrame) {
+                        Text("Global (matches hologram)").tag(ControlFrame.global)
+                        Text("Cockpit (ship axes)").tag(ControlFrame.body)
+                    }
                     Picker("Flight assist", selection: $model.flightAssist) {
                         Text("Velocity hold").tag(FlightAssistMode.velocityHold)
                         Text("Off (Newtonian)").tag(FlightAssistMode.off)

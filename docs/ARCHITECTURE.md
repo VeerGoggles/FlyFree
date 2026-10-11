@@ -85,7 +85,17 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
   |---|---|---|
   | Rotation (pitch, yaw, roll) | 0.4, 0.4, 0.6 rad/s² | 1.2, 1.2, 1.8 rad/s² |
   | Translation | 4 m/s² | 12 m/s² |
-- **Rotation:** the stick sets a target body rate, and the rate reference slews toward it.
+- **Quaternion navigation, with no Euler angles anywhere in the control path.**
+  - Attitude is a unit quaternion. It is integrated with exact axis-angle steps and renormalized every step.
+  - Every frame change is a quaternion acting on a vector.
+  - Errors are quaternion logs (rotation vectors): hand-relative rotation, attitude-hold error, and reset error.
+  - The pedal's tilt comes from a swing-twist decomposition of the relative hand quaternion.
+
+  There is therefore no gimbal lock at any attitude, and tests tumble the ship through more than 360° about oblique axes to confirm it.
+- **Stick frame (`ControlFrame`):**
+  - **`global` (default):** the hand's rotation vector is taken in the launch/world frame, the same frame as the attitude hologram. It is re-projected into the ship's *current* body frame (`ω_body = q⁻¹ · (q_launch · ω_hand)`) on every physics step, and the rate reference is stored in world axes between steps. Tipping your fingertips up therefore always rotates the ship about the same world axis your hand rotated about, whatever the ship's attitude.
+  - **`body`:** a conventional cockpit stick, where pitch is always nose-up relative to the seat.
+- **Rotation:** the target rate slews as a *vector*. The step size lies on the ellipsoid of per-axis limits, so the rotation axis never bends while rates build up.
   - Centered or released: once rotation has settled, the current attitude becomes a *target to hold*. Capturing it only after settling avoids snap-back when the stick is released mid-turn.
   - Closed stick hand: the craft returns to its reset attitude (the launch attitude), using the same limits.
 - **Translation in velocity-hold mode (default):** the pedal *integrates* the forward-speed reference: down accelerates, level holds speed, up brakes and then reverses (reverse is capped at 25% of top speed). Lateral drift is nulled.

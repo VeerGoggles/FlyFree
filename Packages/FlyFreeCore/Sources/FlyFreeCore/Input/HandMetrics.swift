@@ -86,17 +86,13 @@ public enum HandMetrics {
         return rel.axis * angle
     }
 
-    /// Pitch / yaw / roll (radians, right-hand rule about body X / Y / Z) of `current`
-    /// relative to `neutral`, as intrinsic yaw → pitch → roll Euler angles.
-    public static func relativeAngles(current: Quat, neutral: Quat) -> Vec3 {
-        let rel = (neutral.inverse * current).normalized
-        let fwd = rel.act(BodyAxis.forward)
-        let lat = rel.act(BodyAxis.right)
-        let pitch = atan2(fwd.y, (fwd.x * fwd.x + fwd.z * fwd.z).squareRoot())
-        let yaw = atan2(-fwd.x, -fwd.z)
-        let unYawPitch = (Quat(angle: yaw, axis: BodyAxis.up) * Quat(angle: pitch, axis: BodyAxis.right)).inverse
-        let latLocal = unYawPitch.act(lat)
-        return Vec3(pitch, yaw, atan2(latLocal.y, latLocal.x))
+    /// Signed rotation of `current` relative to `neutral` about one axis of the neutral frame,
+    /// via swing–twist decomposition of the relative quaternion (no Euler angles, no gimbal lock).
+    public static func twistAngle(current: Quat, neutral: Quat, about axis: Vec3) -> Double {
+        var rel = (neutral.inverse * current).normalized
+        if rel.real < 0 { rel = Quat(vector: -rel.vector) }
+        let a = simd_normalize(axis)
+        return 2 * atan2(simd_dot(rel.imag, a), rel.real)
     }
 
     /// Eigenvector of the smallest eigenvalue of a symmetric 3×3 matrix (cyclic Jacobi).

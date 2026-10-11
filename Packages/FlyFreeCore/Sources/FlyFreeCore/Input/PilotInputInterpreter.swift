@@ -117,7 +117,7 @@ public struct PilotInputInterpreter: Sendable {
                 throttleFilter.reset()
             } else {
                 // Fingertips down (negative pitch) = accelerate, like pressing a pedal.
-                let pitch = HandMetrics.relativeAngles(current: plane.orientation, neutral: neutral).x
+                let pitch = HandMetrics.twistAngle(current: plane.orientation, neutral: neutral, about: BodyAxis.right)
                 throttle = throttleFilter.filter((-pitch / c.throttleFullDeflection).clamped(to: -1...1), at: time)
             }
         } else {
