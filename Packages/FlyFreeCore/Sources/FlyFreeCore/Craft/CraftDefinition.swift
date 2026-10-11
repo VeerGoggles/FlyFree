@@ -6,29 +6,32 @@ public enum WorldKind: String, Sendable {
     case city
 }
 
-/// Flight computer for multirotors, flown with the jet's controls: pedal = speed, stick pitch =
-/// climb, stick roll = banked turn; position and velocity feedback steer the craft onto the
-/// commanded trajectory.
+/// Flight computer for multirotors, flown like a radio-controlled drone in **angle mode** with a
+/// **raw collective**:
+/// - throttle-hand height → total rotor thrust (stick centre = hover thrust, as in PX4's
+///   rescaled throttle curve); no altitude hold;
+/// - stick-hand tilt → target pitch/roll angle (self-levels when the hand is flat), as in
+///   Betaflight / PX4 angle mode; stick-hand twist → yaw rate.
 public struct MultirotorControl: Sendable, Equatable {
-    public var maxHorizontalSpeed: Double
-    public var maxClimbRate: Double
-    public var maxDescentRate: Double
-    public var maxYawRate: Double
-    /// Maximum tilt from level (rad); also caps horizontal acceleration at g·tan(tilt).
+    /// Maximum tilt from level (rad), like Betaflight's `angle_limit`.
     public var maxTilt: Double
-    /// Velocity loop gain (1/s) and position loop gain (1/s²).
-    public var velocityGain = 1.8
-    public var positionGain = 0.8
-    /// How far the position reference may lead the craft (m).
-    public var maxPositionError = 4.0
+    /// Drone tilt per radian of hand tilt (1 = the drone copies the hand).
+    public var tiltPerHandTilt: Double
+    public var maxYawRate: Double
+    /// Highest collective the throttle hand can command, as a fraction of the rotors' total
+    /// thrust; the rest is kept for attitude control (like a mixer's desaturation headroom).
+    public var maxCollectiveFraction = 0.85
+    /// Collective (fraction of hover) while sitting on the ground with the hand at or below centre.
+    public var groundIdle = 0.3
+    /// Closed throttle hand: vertical-speed gain (1/s) of the hover assist.
+    public var hoverAssistGain = 1.5
+    /// Hand tilt dead zone and response (normalized like `PilotInput.rotation`).
+    public var tiltShaping = AxisShaping(deadzone: 0.03, expo: 0)
 
-    public init(maxHorizontalSpeed: Double, maxClimbRate: Double, maxDescentRate: Double,
-                maxYawRate: Double, maxTilt: Double) {
-        self.maxHorizontalSpeed = maxHorizontalSpeed
-        self.maxClimbRate = maxClimbRate
-        self.maxDescentRate = maxDescentRate
-        self.maxYawRate = maxYawRate
+    public init(maxTilt: Double, tiltPerHandTilt: Double, maxYawRate: Double) {
         self.maxTilt = maxTilt
+        self.tiltPerHandTilt = tiltPerHandTilt
+        self.maxYawRate = maxYawRate
     }
 }
 
@@ -154,6 +157,11 @@ public struct CraftDefinition: Sendable, Identifiable {
         case .deepSpace: DeepSpace()
         case .earth, .city: Atmosphere()
         }
+    }
+
+    /// Total upward thrust from rotors (N).
+    public var maxRotorThrust: Double {
+        actuators.filter { $0.kind == .rotor }.reduce(0) { $0 + max(0, $1.direction.y) * $1.maxForce }
     }
 
     /// Total forward thrust from main engines (N).

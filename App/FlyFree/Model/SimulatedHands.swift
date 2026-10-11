@@ -15,9 +15,8 @@ struct SimulatedHands {
     var pedal = 0.0
     /// Throttle hand closed: brake to a stop.
     var throttleClosed = false
-    /// Throttle hand moved from its calibrated spot (cm): up, and forward (drone).
+    /// Throttle hand raised from its calibrated height (cm), for the drone's collective.
     var handUp = 0.0
-    var handForward = 0.0
 
     /// - Parameter poses: the craft's starting pose per hand; slider motions apply on top of it,
     ///   in the pilot's frame, exactly as real hand motions would.
@@ -38,7 +37,7 @@ struct SimulatedHands {
             chirality: dominant.opposite,
             orientation: Quat(angle: -pedal * radians, axis: BodyAxis.right)
                 * (poses[dominant.opposite] ?? .flat).orientation(for: dominant.opposite),
-            position: Vec3(dominant == .right ? -0.2 : 0.2, 1.0 + handUp / 100, -0.35 - handForward / 100),
+            position: Vec3(dominant == .right ? -0.2 : 0.2, 1.0 + handUp / 100, -0.35),
             curl: curl(throttleClosed ? 0.9 : 0)
         )
         return dominant == .right ? (throttle, stick) : (stick, throttle)

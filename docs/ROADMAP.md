@@ -42,7 +42,7 @@ Each phase ends with something you can fly. Checked items are already in the rep
 ## Phase 3: Atmosphere (v0.4), detailed in [FLIGHT_MODEL.md](FLIGHT_MODEL.md) as milestones F1–F7
 - [x] Atmospheric jet: aerodynamics, control surfaces, landing gear, fly-by-wire, runway, Valley Run course
 - [x] Flight-path marker
-- [x] Passenger drone: rotor allocation, velocity/altitude-hold flight computer, city scene, Rooftop Run
+- [x] Passenger drone: rotor allocation, RC angle-mode flight computer with raw collective, city scene, Rooftop Run
 - [ ] F1/F2: velocity-coupling slider, flight-path marker, turn-acceleration limit, drift-kill
 - [ ] `Atmosphere` environment: density by altitude, wind, turbulence
 - [ ] Aerodynamic-surface actuators (aileron, elevator, rudder, flaps), with effectiveness that scales with dynamic pressure

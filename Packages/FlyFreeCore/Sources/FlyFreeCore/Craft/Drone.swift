@@ -1,7 +1,8 @@
 extension CraftCatalog {
     /// A two-seat passenger quadcopter (air-taxi class): 450 kg, four 2.5 kN rotors on 2.2 m arms,
-    /// bubble canopy. Flown with the jet's controls — pull back to lift off, pedal for speed, bank
-    /// to turn — through a position/velocity flight computer. Starts on a helipad in the city.
+    /// bubble canopy. Flown like a camera drone in angle mode: throttle-hand height is the collective
+    /// (raw thrust, centre = hover), stick-hand tilt tilts the drone, twist turns it. Starts on a
+    /// helipad in the city.
     public static let drone: CraftDefinition = {
         let arm = 2.2
         let rotors: [Actuator] = [
@@ -21,15 +22,14 @@ extension CraftCatalog {
         return CraftDefinition(
             id: "drone",
             name: "Passenger Drone",
-            summary: "A two-seat air-taxi quadcopter, flown like the jet: pull back to lift off, pedal for speed, bank to turn. Thread the gates between the towers.",
+            summary: "A two-seat air-taxi quadcopter. Raise your left hand for thrust, tilt your right hand to tilt the drone, twist to turn. Thread the gates between the towers.",
             mass: MassProperties(mass: 450, inertia: Vec3(520, 500, 520)),
             actuators: rotors,
             profile: ControlProfile(
                 maxAngularRate: Vec3(1.5, 1.2, 1.5),
                 angularAcceleration: Vec3(4, 1.0, 4),
                 angularDeceleration: Vec3(6, 1.2, 6),
-                // Speed ramps stay inside what tilting can deliver (g·tan(0.45) ≈ 4.7 m/s²), so the
-                // trajectory is always flyable and braking never overshoots.
+                // Unused in angle mode (the hands set tilt and thrust directly).
                 linearAcceleration: 3.5,
                 linearDeceleration: 4,
                 maxForwardSpeed: 18,
@@ -41,8 +41,7 @@ extension CraftCatalog {
             hullSize: Vec3(2 * arm + 2, 2.2, 2 * arm + 2),
             world: .city,
             landingGear: gear,
-            multirotor: MultirotorControl(maxHorizontalSpeed: 20, maxClimbRate: 6, maxDescentRate: 4,
-                                          maxYawRate: 0.7, maxTilt: 0.45),
+            multirotor: MultirotorControl(maxTilt: 0.5, tiltPerHandTilt: 0.6, maxYawRate: 0.8),
             drag: BodyDrag(dragArea: 1.4, angularDamping: Vec3(150, 60, 150)),
             holdRateFraction: 1,
             startState: RigidBodyState(position: Vec3(0, skidHeight - 0.05, 0)),

@@ -21,8 +21,8 @@ public struct CurlCalibration: Sendable, Equatable {
 public enum ThrottleHandMode: String, Sendable, Equatable {
     /// Orientation: the hand is a pedal (fingertips down = more).
     case pedal
-    /// Position: moving the hand up/down and forward/back from its calibrated spot commands
-    /// `PilotInput.translation` (drone-style).
+    /// Position: raising or lowering the hand from its calibrated height commands
+    /// `PilotInput.translation.y` (drone collective).
     case position
 }
 
@@ -59,7 +59,8 @@ public struct InterpreterConfiguration: Sendable, Equatable {
 /// Both hands are modelled as planes in space, measured relative to their calibrated neutral.
 /// - **Stick hand, flat:** the plane's rotation vector → pitch / yaw / roll.
 /// - **Stick hand, closed:** reset orientation.
-/// - **Throttle hand, flat:** a pedal — fingertips down accelerates, up brakes / reverses.
+/// - **Throttle hand, flat:** a pedal — fingertips down accelerates, up brakes / reverses — or,
+///   for the drone (`.position`), its height above or below the calibrated spot.
 /// - **Throttle hand, closed:** brake to a stop.
 public struct PilotInputInterpreter: Sendable {
     public var configuration: InterpreterConfiguration
@@ -134,17 +135,11 @@ public struct PilotInputInterpreter: Sendable {
                 throttleFilter.reset()
                 for i in translationFilters.indices { translationFilters[i].reset() }
             } else if c.throttleHandMode == .position {
-                // Where the hand is, relative to where it was calibrated, in the pilot's frame:
-                // up/down → vertical, forward/back → fore/aft (−Z forward).
+                // How high the hand is relative to where it was calibrated: up/down → vertical.
                 throttle = 0
                 if let home = calibration?.position(c.dominantHand.opposite) {
-                    let offset = plane.centroid - home
-                    var t = Vec3.zero
-                    for axis in [1, 2] {
-                        let normalized = (offset[axis] / c.positionFullDeflection).clamped(to: -1...1)
-                        t[axis] = translationFilters[axis].filter(normalized, at: time)
-                    }
-                    translation = t
+                    let normalized = ((plane.centroid.y - home.y) / c.positionFullDeflection).clamped(to: -1...1)
+                    translation = Vec3(0, translationFilters[1].filter(normalized, at: time), 0)
                 }
             } else {
                 // Fingertips down (negative pitch) = accelerate, like pressing a pedal.

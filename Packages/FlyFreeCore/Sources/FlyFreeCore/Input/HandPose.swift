@@ -1,3 +1,4 @@
+import Foundation
 import simd
 
 /// A target orientation for one hand's plane, in the pilot's frame (+X right, +Y up, −Z forward).
@@ -33,6 +34,13 @@ public struct HandPose: Sendable, Equatable {
     /// Flat, palm down, fingers forward.
     public static let flat = HandPose(backOfHand: Vec3(0, 1, 0), fingers: Vec3(0, 0, -1),
                                       instruction: "Flat, palm down, fingers forward")
+
+    /// Flat, palm down, bent at the wrist so the fingertips point `angle` (rad) above forward —
+    /// like pushing on something. Negative bends the fingertips down.
+    public static func tipped(_ angle: Double, instruction: String) -> HandPose {
+        HandPose(backOfHand: Vec3(0, cos(angle), sin(angle)), fingers: Vec3(0, sin(angle), -cos(angle)),
+                 instruction: instruction)
+    }
 }
 
 /// The hand poses a simulation starts from, by role. Written for a right-handed pilot (stick in
@@ -56,7 +64,13 @@ public struct StartingPose: Sendable, Equatable {
             : [.left: stick.mirrored, .right: throttle.mirrored]
     }
 
-    /// Both hands flat, palms down, fingers forward. FlyFree's hands are always flat — never
-    /// turned sideways — so every craft starts here.
+    /// Both hands flat, palms down, fingers forward (the spacecraft and the drone). FlyFree's
+    /// hands are always flat — never turned sideways.
     public static let bothFlat = StartingPose(stick: .flat, throttle: .flat)
+
+    /// The jet: both hands flat and palms down, the stick hand bent up at the wrist like a push,
+    /// the throttle hand bent down.
+    public static let stickUpThrottleDown = StartingPose(
+        stick: .tipped(.pi / 4, instruction: "Palm down, fingertips bent up, like a push"),
+        throttle: .tipped(-.pi / 4, instruction: "Palm down, fingertips bent down"))
 }

@@ -54,7 +54,7 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
 
    Both hands must meet these for 1.5 s. The orientation averaged over that hold becomes each hand's **neutral frame**.
 
-  **Starting pose (`StartingPose`).** Every craft starts with **both hands flat, palms down, fingers forward**; hands are never turned sideways. Calibration only completes when each hand's plane is within about 35° of flat (`HandReadiness.wrongPose` otherwise), and a faint outline of the target floats on each hand, turning green when it matches. The next simulation in the auto-advance cycle recalibrates before its scene fades in.
+  **Starting pose (`StartingPose`).** Hands are always palm down, never turned sideways. The spacecraft and drone start with **both hands flat** (`bothFlat`); the jet starts with the **stick hand bent up ~45° like a push and the throttle hand bent down ~45°** (`stickUpThrottleDown`). Calibration only completes when each hand's plane is within about 35° of its pose (`HandReadiness.wrongPose` otherwise), and a faint outline of the target floats on each hand, turning green when it matches. The next simulation in the auto-advance cycle recalibrates before its scene fades in.
 
 ### 3.1 Hand source → `HandFrame`
 - **ARKit (`HandTrackingService`)** reads `HandTrackingProvider.latestAnchors` once per frame and converts each joint into world-space positions.
@@ -191,20 +191,15 @@ The jet runs through the same pipeline, with more physics and a fly-by-wire laye
 
 - **Rotors** are `rotor` actuators. Each produces lift along body up plus a reaction torque about up; its spin direction sets the torque's sign. The allocator mixes them exactly like a quadcopter mixer, with no hand-written mixing table. For small actuator groups it starts from the exact least-squares solution, because rotor yaw torque is tiny next to lift.
 - **Physics:** `Atmosphere` (gravity and air), `BodyDrag` (bluff-body drag and rotational damping), and four landing skids.
-- **Throttle hand drives by position (`ThrottleHandMode.position`).** Calibration records each hand's neutral *position* as well as its orientation. The throttle hand's offset from that spot, in the pilot's frame and scaled so ±15 cm is full command, becomes `PilotInput.translation`:
-  - up/down → climb/descend;
-  - forward/back → fly forward/back.
-- **Flight computer (`IntentMapper.multirotorReference`), drone-style:**
-  - Throttle-hand height sets climb; its fore/aft offset, plus the stick tipped forward or back, sets fore/aft speed. Stick roll slides sideways; stick twist turns.
-  - All of these add into **one velocity vector** in the drone's heading frame. Climbing and moving together therefore produce one thrust vector that is both larger than hover thrust and tilted: the two functions combine additively on the rotors.
-  - Releasing holds position. A closed throttle hand stops and hovers wherever braking ends. A closed stick hand hovers and turns back to the launch heading.
+- **Throttle hand is the collective (`ThrottleHandMode.position`).** Calibration records each hand's neutral *position* as well as its orientation. The throttle hand's height above or below that spot, scaled so ±15 cm is full command, becomes `PilotInput.translation.y`.
+- **Flight computer (`IntentMapper.multirotorReference`): RC angle mode with a raw collective,** modelled on Betaflight / PX4 angle (stabilized) mode with a Mode 2 split — thrust on one hand, attitude on the other:
+  - **Collective:** hand height → total rotor thrust. Centre is hover thrust (as with PX4's default rescaled throttle curve, `MPC_THR_CURVE`), full up is 85 % of the rotors' total thrust (the rest is kept as attitude headroom, like a mixer's desaturation), full down is zero. There is no altitude hold: vertical speed persists at centre, and tilting spends lift.
+  - **Attitude:** stick-hand tilt (pitch and roll, in the pilot's frame) → target tilt of the rotor disc, 0.6× the hand's tilt, capped at `maxTilt` (Betaflight's `angle_limit`). A flat hand levels the drone, which then coasts.
+  - **Yaw:** stick-hand twist → yaw rate; heading is held when centred.
+  - Closed throttle hand: hover assist (collective that drives vertical speed to zero, compensating for tilt). Closed stick hand: level and turn back to the launch heading. On the pad, tilt and yaw are ignored and a centred or lowered hand idles the rotors.
 
-  The chain from there:
-  1. **Desired trajectory:** a velocity reference, plus a position reference integrated from it and kept within 4 m of the drone.
-  2. **Position and velocity feedback** turn the tracking error into a commanded acceleration, limited by the maximum tilt. Speed ramps stay within what tilting can deliver, so the trajectory is always flyable.
-  3. The acceleration becomes a **thrust vector**, which becomes the target attitude (heading, with the rotor disc tilted onto the vector) plus collective thrust.
-  4. The allocator turns that into **individual rotor commands**.
-- **Starting pose:** both hands flat, like every craft.
+  The chain from there is the standard cascade: the controller turns attitude error into a rate command (angle P) and rate error into torque (rate loop), and the allocator mixes collective + torque into **individual rotor thrusts**.
+- **Starting pose:** both hands flat.
 - **Scene:**
   - a procedural city on a 100 m street grid, with towers that get taller downtown and use shared generated window textures;
   - a park and a helipad at the origin;

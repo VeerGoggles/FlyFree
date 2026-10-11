@@ -51,10 +51,10 @@ struct HangarView: View {
                     Text("Controls")
                 } footer: {
                     Text("""
-                    Hold both hands out flat, palms down, until they lock in — the cockpit fades in around you.
+                    Hold your hands in the craft's starting pose until they lock in — the cockpit fades in around you. Spacecraft and drone: both hands flat, palms down. Jet: palms down, stick hand bent up like a push, throttle hand bent down.
                     Stick hand: tip fingertips up/down to pitch, turn the wrist left/right to yaw, rotate the forearm to roll. Close it to return to the starting orientation.
                     Throttle hand is a pedal: push fingertips down to accelerate, level to hold speed, tip up to brake. Close it to brake to a stop.
-                    Drone: move your flat throttle hand — up/down to climb or descend, forward/back to fly forward or back (they combine). Stick hand: twist to turn, roll to slide sideways, tip to add forward/back. Let go to hold position.
+                    Drone: your left (throttle) hand's height is rotor thrust — where you started is hover, raise it to climb, lower it to descend. Tilt your right hand and the drone tilts the same way (fingertips down flies forward, roll to slide sideways); hold it flat to level off. Twist it to turn. Close the throttle hand to hover in place.
                     Jet: the pedal sets the autothrottle's airspeed. Let go of the stick to hold your climb and bank; close it for wings-level, level flight. Rotate at about 90 m/s to take off.
                     """)
                 }

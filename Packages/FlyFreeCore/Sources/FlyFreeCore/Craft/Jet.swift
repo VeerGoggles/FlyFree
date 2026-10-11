@@ -56,7 +56,7 @@ extension CraftCatalog {
             startState: RigidBodyState(position: Vec3(0, gearHeight - 0.12, 0)),
             course: CourseCatalog.valleyRun,
             speedGauge: .jetAirspeed,
-            startingPose: .bothFlat
+            startingPose: .stickUpThrottleDown
         )
     }()
 }

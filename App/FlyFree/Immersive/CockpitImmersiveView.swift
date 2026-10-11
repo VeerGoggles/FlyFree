@@ -283,7 +283,6 @@ struct SimulatedHandsPanel: View {
                 SimSlider(label: "Roll", value: $model.simulatedHands.roll, range: -40...40)
                 if model.craft.throttleHand == .position {
                     SimSlider(label: "Hand up", value: $model.simulatedHands.handUp, range: -15...15, unit: "cm")
-                    SimSlider(label: "Hand fwd", value: $model.simulatedHands.handForward, range: -15...15, unit: "cm")
                 } else {
                     SimSlider(label: "Pedal", value: $model.simulatedHands.pedal, range: -30...30)
                 }
@@ -294,7 +293,6 @@ struct SimulatedHandsPanel: View {
                     model.simulatedHands.roll = 0
                     model.simulatedHands.pedal = 0
                     model.simulatedHands.handUp = 0
-                    model.simulatedHands.handForward = 0
                 }
             }
             .padding(20)

@@ -15,10 +15,12 @@ public struct IntentMapper: Sendable {
     public var assist: FlightAssistMode
     /// Aircraft flight computer (coordinated turns, α protection, autothrottle, wings-level reset).
     public var aircraft: AircraftControl?
-    /// Multirotor flight computer (velocity flying, altitude hold, hover on release).
+    /// Multirotor flight computer (angle mode, raw collective).
     public var multirotor: MultirotorControl?
     /// Craft mass (kg), for multirotor thrust.
     public var mass = 1.0
+    /// Total rotor thrust (N), for the multirotor collective.
+    public var maxRotorThrust = 0.0
     /// Attitude a closed stick hand returns the craft to (the launch attitude).
     public var resetAttitude: Quat
     /// Fraction of max forward speed / thrust available in reverse.
@@ -33,10 +35,6 @@ public struct IntentMapper: Sendable {
     private var flightPathHold: (gamma: Double, bank: Double)?
     private var autothrottlePrimed = false
     private var droneHeading: Double?
-    private var droneVelocity = Vec3.zero  // world-frame velocity reference
-    private var dronePosition: Vec3?       // world-frame position reference
-    /// Height of the craft's centre above the ground when sitting on it (multirotor take-off check).
-    public var groundClearance = 0.0
 
     public init(profile: ControlProfile, assist: FlightAssistMode,
                 resetAttitude: Quat = Quat(ix: 0, iy: 0, iz: 0, r: 1)) {
@@ -219,20 +217,22 @@ public struct IntentMapper: Sendable {
 
     // MARK: - Multirotor
 
-    /// Multirotor intent, drone-style:
-    /// - **throttle hand position**: raise/lower → climb/descend; push forward/pull back → fly
-    ///   forward/back. The two add together (up-and-forward climbs while moving forward);
-    /// - **stick hand**: twist → turn, roll → slide sideways, tip forward/back → forward/back
-    ///   (added to the throttle hand's push);
-    /// - released → hold position; closed throttle hand → stop and hover; closed stick → hover
-    ///   and turn back to the launch heading.
+    /// Multirotor intent, flown like an RC drone in angle mode (Mode 2 split: thrust on the
+    /// throttle hand, attitude on the stick hand):
+    /// - **throttle-hand height → collective.** Raw total rotor thrust: the calibrated height is
+    ///   hover thrust (PX4's rescaled throttle curve), full up is the rotors' top thrust, full
+    ///   down is none. There is no altitude hold — tilting spends lift, so add a little hand
+    ///   height to hold altitude in forward flight, exactly as with a real drone;
+    /// - **stick-hand tilt → attitude** (angle mode, as in Betaflight / PX4): fingertips down
+    ///   tips the nose down, rolling the hand banks the drone, scaled by `tiltPerHandTilt` and
+    ///   capped at `maxTilt`. A flat hand levels the drone, which then coasts;
+    /// - **stick-hand twist → yaw rate**, holding heading when centred;
+    /// - closed throttle hand: hover assist (thrust that stops vertical motion); closed stick:
+    ///   level and turn back to the launch heading.
     ///
-    /// Every command becomes one velocity vector in the craft's heading frame. That vector drives a
-    /// **desired trajectory** (velocity reference + position reference), position and velocity
-    /// feedback turn the tracking error into an acceleration, the acceleration becomes a single
-    /// thrust vector — climbing adds collective, moving tilts it, both at once — and the craft tilts
-    /// its rotor disc onto that vector. The allocator then splits the wrench into individual rotor
-    /// commands, so the functions combine additively on the rotors.
+    /// The flight controller turns the attitude error into a rate command and the rate error into
+    /// torque (the angle-P → rate-PID cascade); the allocator mixes collective + torque into
+    /// individual rotor thrusts.
     private mutating func multirotorReference(_ input: PilotInput, state: RigidBodyState,
                                               onGround: Bool, dt: Double) -> DesiredCraftState {
         guard let mr = multirotor else { return reference(input, state: state, dt: dt) }
@@ -240,29 +240,19 @@ public struct IntentMapper: Sendable {
         let q = state.orientation
         var heading = droneHeading ?? Self.heading(q)
 
-        // --- Intent → velocity in the heading frame ----------------------------------------
-        let stick = input.engaged
-            ? Vec3(profile.rotationShaping.apply(input.rotation.x),
-                   profile.rotationShaping.apply(input.rotation.y),
-                   profile.rotationShaping.apply(input.rotation.z))
-            : .zero
-        let hand = Vec3(0, profile.throttleShaping.apply(input.translation.y),
-                        profile.throttleShaping.apply(input.translation.z))
-
-        // Forward: throttle hand pushed forward (−Z) plus stick tipped forward (fingertips down).
-        var forward = ((-hand.z) + (-stick.x)).clamped(to: -1...1) * mr.maxHorizontalSpeed
-        var lateral = -stick.z * mr.maxHorizontalSpeed
-        var climb = hand.y >= 0 ? hand.y * mr.maxClimbRate : hand.y * mr.maxDescentRate
-        var turn = stick.y * mr.maxYawRate
+        // --- Stick hand: tilt → attitude, twist → yaw rate ----------------------------------
+        var tilt = Vec3.zero  // rotation vector in the heading frame (x = pitch, z = roll)
+        var turn = 0.0
+        if input.engaged && !onGround {
+            let perUnit = (Double.pi / 2) * mr.tiltPerHandTilt  // normalized hand tilt → drone tilt
+            tilt = Vec3(mr.tiltShaping.apply(input.rotation.x), 0, mr.tiltShaping.apply(input.rotation.z)) * perUnit
+            if simd_length(tilt) > mr.maxTilt { tilt = simd_normalize(tilt) * mr.maxTilt }
+            turn = profile.rotationShaping.apply(input.rotation.y) * mr.maxYawRate
+        }
         if input.stickClosed {
-            forward = 0; lateral = 0
+            tilt = .zero
             turn = (remainder(Self.heading(resetAttitude) - heading, 2 * .pi) * 1.5).clamped(to: -mr.maxYawRate...mr.maxYawRate)
         }
-        if input.throttleClosed { forward = 0; lateral = 0; climb = 0 }
-
-        // On the pad the craft can't slide: horizontal motion only once it has lifted off.
-        let airborne = !onGround && state.position.y > groundClearance + 1.0
-        if !airborne { forward = 0; lateral = 0 }
 
         // Smooth the turn rate and keep the heading target close to the craft (no wind-up).
         let slowingTurn = abs(turn) < abs(rateReference.y) || turn * rateReference.y < 0
@@ -273,49 +263,22 @@ public struct IntentMapper: Sendable {
         heading = actualHeading + remainder(heading - actualHeading, 2 * .pi).clamped(to: -0.3...0.3)
         droneHeading = heading
 
-        // --- Trajectory → desired velocity and position --------------------------------------
-        let ahead = Vec3(-sin(heading), 0, -cos(heading)), right = Vec3(cos(heading), 0, -sin(heading))
-        let targetVelocity = ahead * forward + right * lateral + Vec3(0, climb, 0)
-        let previous = droneVelocity
-        droneVelocity = Self.slew(droneVelocity, toward: targetVelocity,
-                                  step: (simd_length(targetVelocity) > simd_length(droneVelocity)
-                                         ? profile.linearAcceleration : profile.linearDeceleration) * dt)
-        let feedForward = dt > 0 ? (droneVelocity - previous) / dt : .zero
+        let yaw = Quat(angle: heading, axis: BodyAxis.up)
+        let attitude = simd_length(tilt) > 0
+            ? (yaw * Quat(angle: simd_length(tilt), axis: simd_normalize(tilt))).normalized
+            : yaw
 
-        // Desired position follows the velocity reference; it is kept within a few metres of the
-        // craft so a long disturbance can't wind it up. When climb is commanded off, altitude is
-        // held exactly by the position loop.
-        var target = (dronePosition ?? state.position) + droneVelocity * dt
-        if !airborne && climb <= 0 { target = state.position }
-        // Braking (closed throttle hand) means "stop wherever the stop ends": the position
-        // reference follows the craft until the velocity reference reaches zero, then locks.
-        if input.throttleClosed, simd_length(droneVelocity) > 0.05 { target = state.position + droneVelocity * dt }
-        let error = target - state.position
-        if simd_length(error) > mr.maxPositionError {
-            target = state.position + simd_normalize(error) * mr.maxPositionError
+        // --- Throttle hand: height → collective ---------------------------------------------
+        let hover = mass * g
+        let top = max(hover, maxRotorThrust * mr.maxCollectiveFraction)
+        let lever = profile.throttleShaping.apply(input.translation.y)
+        var collective = lever >= 0 ? hover + lever * (top - hover) : hover * (1 + lever)
+        if input.throttleClosed {
+            // Hover assist: hold vertical speed at zero whatever the tilt.
+            let upY = max(q.act(BodyAxis.up).y, 0.5)
+            collective = (mass * (g - state.velocity.y * mr.hoverAssistGain) / upY).clamped(to: 0...top)
         }
-        dronePosition = target
-
-        // --- Position + velocity feedback → acceleration → thrust vector --------------------
-        var accel = feedForward
-            + (droneVelocity - state.velocity) * mr.velocityGain
-            + (target - state.position) * mr.positionGain
-        let maxHorizontal = g * tan(mr.maxTilt)
-        let horizontal = Vec3(accel.x, 0, accel.z)
-        if simd_length(horizontal) > maxHorizontal {
-            let h = simd_normalize(horizontal) * maxHorizontal
-            accel.x = h.x
-            accel.z = h.z
-        }
-        var thrust = (accel + Vec3(0, g, 0)) * mass
-        thrust.y = max(thrust.y, 0.25 * mass * g)
-
-        // --- Thrust vector → attitude + collective (→ allocator → rotors) -----------------
-        let up = simd_normalize(thrust)
-        let tilt = Quat(from: Vec3(0, 1, 0), to: up)
-        let attitude = (tilt * Quat(angle: heading, axis: BodyAxis.up)).normalized
-        var collective = max(0, simd_dot(thrust, q.act(BodyAxis.up)))
-        if onGround, climb <= 0.05 { collective = 0.3 * mass * g }  // idle on the pad
+        if onGround, lever <= 0, !input.throttleClosed { collective = mr.groundIdle * hover }  // idle on the pad
 
         var desired = DesiredCraftState(angularRate: q.inverse.act(Vec3(0, rateReference.y, 0)), attitude: attitude,
                                         assist: .velocityHold, bodyVelocity: .zero)

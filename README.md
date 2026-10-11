@@ -28,7 +28,7 @@ That 3D hand motion becomes a *desired craft state* in the craft's current frame
 | Completion screen: time, score and best time; goes straight on to the next craft (or Retry) | |
 | **Atmospheric jet**: lift, drag and stall; control surfaces; landing gear; fly-by-wire; runway take-off; Valley Run gates | |
 | Flight-path marker showing where you're actually going | |
-| **Passenger drone**: throttle-hand position flies it (up/down = climb, forward/back = fly), stick turns and slides; both combine on the rotors through a position/velocity flight computer; Rooftop Run gates in a procedural city | |
+| **Passenger drone**: RC-style angle mode — throttle-hand height is raw rotor thrust (start height = hover), stick-hand tilt tilts the drone, twist turns it; Rooftop Run gates in a procedural city | |
 | Speedometer with a scale on every craft (linear airspeed / logarithmic space speed) | |
 | Quaternion navigation: stick deltas apply about the ship's current axes, identically at any attitude | |
 | Hand holograms: ship attitude over the stick hand, live thrusters over the throttle hand | |
@@ -76,7 +76,7 @@ cd Packages/FlyFreeCore && swift test
 
 | Hand | Motion | Effect |
 |---|---|---|
-| Both | Hold out flat, palms down, and keep still for 1.5 s (outlines float on your hands) | Calibrate the neutral pose; the cockpit fades in |
+| Both | Hold the craft's starting pose and keep still for 1.5 s (outlines float on your hands) | Calibrate the neutral pose; the cockpit fades in |
 | Stick | Tip fingertips up or down (the plane's front-to-back angle) | Pitch (exponential response: fine near center, full rate at 90°) |
 | Stick | Turn the wrist horizontally | Yaw |
 | Stick | Rotate the forearm | Roll |
@@ -86,7 +86,25 @@ cd Packages/FlyFreeCore && swift test
 | Throttle | Tip fingertips up | Brake, then reverse |
 | Throttle | Close the hand | Brake to a full stop (12 m/s²) |
 
-Every craft starts the same way: **both hands flat, palms down, fingers forward**. Hands are never turned sideways. The drone's throttle hand flies it by **position**: raise or lower the flat hand to climb or descend, and push it forward or pull it back to fly forward or back.
+Hands are always palm down, never turned sideways. Starting poses:
+
+| Craft | Stick hand | Throttle hand |
+|---|---|---|
+| Spacecraft | Flat | Flat |
+| Jet | Bent up at the wrist ~45°, like a push | Bent down ~45° |
+| Drone | Flat | Flat |
+
+All control is measured from the starting pose. The **drone** flies like an RC drone in angle mode:
+
+| Hand | Motion | Effect |
+|---|---|---|
+| Throttle | Raise / lower from the start height (±15 cm = full) | Total rotor thrust: start height = hover, up = more, down = less. No altitude hold — tilting costs lift |
+| Throttle | Close the hand | Hover assist: thrust that stops vertical motion |
+| Stick | Tilt fingertips down / up | Nose down / up, 0.6× the hand's tilt (max 29°) — flies forward / back |
+| Stick | Roll the hand | Bank the drone the same way — slides sideways |
+| Stick | Hold flat | Level off (it coasts; there is no position hold) |
+| Stick | Twist | Yaw |
+| Stick | Close the hand | Level and turn back to the launch heading |
 
 Dashboard buttons: **Recenter** (re-calibrate), **Reset** (back to start), **Land** (return to the hangar).
 

@@ -65,7 +65,7 @@ public struct FlightPipeline: Sendable {
         self.mapper.aircraft = craft.aircraft
         self.mapper.multirotor = craft.multirotor
         self.mapper.mass = craft.mass.mass
-        self.mapper.groundClearance = start.position.y
+        self.mapper.maxRotorThrust = craft.maxRotorThrust
         self.controller = FlightController(gains: craft.gains, mass: craft.mass,
                                            maxForwardThrust: craft.maxForwardThrust,
                                            maxHoldRate: craft.profile.maxAngularRate * craft.holdRateFraction)

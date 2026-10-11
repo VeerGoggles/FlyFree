@@ -2,8 +2,8 @@ import Testing
 import simd
 @testable import FlyFreeCore
 
-/// Drone-style flight: the throttle hand's position moves the drone up/down and forward/back
-/// (additively); the stick hand turns, slides and adds fore/aft.
+/// Drone flight, RC angle mode: throttle-hand height is the collective (centre = hover thrust),
+/// stick-hand tilt tilts the drone, twist turns it.
 @Suite struct DroneTests {
     let drone = CraftCatalog.drone
     let dt = 1.0 / 90
@@ -14,20 +14,21 @@ import simd
         return t
     }
 
-    /// Throttle hand raised/lowered (y) and pushed forward (−z), as normalized translation.
-    private func hand(up: Double = 0, forward: Double = 0, stick: Vec3 = .zero) -> PilotInput {
-        PilotInput(rotation: stick, translation: Vec3(0, up, -forward), engaged: true)
+    /// Throttle hand raised/lowered (normalized height) and the stick hand's normalized rotation.
+    private func hands(up: Double = 0, stick: Vec3 = .zero) -> PilotInput {
+        PilotInput(rotation: stick, translation: Vec3(0, up, 0), engaged: true)
     }
 
+    /// Lifted off, then stopped climbing with the hover assist.
     private func airborne() -> FlightPipeline {
         var p = FlightPipeline(craft: drone)
-        _ = run(&p, hand(up: 1), seconds: 5)
-        _ = run(&p, hand(), seconds: 3)
+        _ = run(&p, hands(up: 0.5), seconds: 3)
+        _ = run(&p, PilotInput(engaged: true, throttleClosed: true), seconds: 4)
         return p
     }
 
-    private func horizontalSpeed(_ t: FlightTelemetry) -> Double {
-        simd_length(Vec3(t.state.velocity.x, 0, t.state.velocity.z))
+    private func tilt(_ t: FlightTelemetry) -> Double {
+        acos(t.state.orientation.act(BodyAxis.up).y.clamped(to: -1...1))
     }
 
     @Test func rotorsMixLikeAQuadcopter() {
@@ -42,94 +43,96 @@ import simd
         #expect(abs(c[0] - c[2]) < 0.01 && abs(c[1] - c[3]) < 0.01 && abs(c[0] - c[1]) > 0.1)
     }
 
-    @Test func startsFlatWithTheThrottleHandDrivenByPosition() {
+    @Test func startsFlatWithTheThrottleHandDrivenByHeight() {
         #expect(drone.startingPose == .bothFlat)
         #expect(drone.throttleHand == .position)
     }
 
-    @Test func raisingTheHandLiftsOffAndLevelHandHoldsAltitude() {
+    @Test func handHeightIsRawCollectiveCentredOnHover() {
+        let hover = drone.mass.mass * 9.81
+        var p = airborne()
+        // Centred: exactly hover thrust, so vertical speed holds (no altitude hold pulls it back).
+        p.state.velocity.y = 1
+        var t = run(&p, hands(), seconds: 2)
+        #expect(abs(t.achieved.force.y - hover) < 0.02 * hover)
+        #expect(abs(t.state.velocity.y - 1) < 0.1)
+        // Full up: the rotors' top collective; full down: none.
+        t = run(&p, hands(up: 1), seconds: 0.5)
+        #expect(abs(t.desired.bodyForce!.y - drone.maxRotorThrust * drone.multirotor!.maxCollectiveFraction) < 1)
+        t = run(&p, hands(up: -1), seconds: 0.1)
+        #expect(t.desired.bodyForce!.y < 1)
+    }
+
+    @Test func raisingTheHandLiftsOffAndLoweringItComesBackDown() {
         var p = FlightPipeline(craft: drone)
-        var t = run(&p, hand(up: 1), seconds: 4)
+        var t = run(&p, hands(), seconds: 2)
+        #expect(t.wheelsOnGround == 4)   // centred hand on the pad: idle
+        t = run(&p, hands(up: 0.5), seconds: 3)
         #expect(!t.onGround)
-        #expect(t.state.velocity.y > 5)
-        _ = run(&p, hand(), seconds: 3)
-        let y = p.state.position.y
-        t = run(&p, hand(), seconds: 5)
-        #expect(abs(t.state.position.y - y) < 0.3)
-        #expect(simd_length(t.state.velocity) < 0.1)
+        #expect(t.state.velocity.y > 3)
+        t = run(&p, hands(up: -0.5), seconds: 5)
+        #expect(t.state.velocity.y < 0)
     }
 
-    @Test func pushingTheHandForwardFliesForwardAndPullingBackFliesBack() {
+    @Test func tippingTheStickHandTiltsTheDroneAndFliesForward() {
         var p = airborne()
-        var t = run(&p, hand(forward: 1), seconds: 8)
-        #expect(-t.state.velocity.z > drone.multirotor!.maxHorizontalSpeed - 1)
-        let y = p.state.position.y
-        t = run(&p, hand(forward: -1), seconds: 12)
-        #expect(t.state.velocity.z > drone.multirotor!.maxHorizontalSpeed - 1)
-        #expect(abs(t.state.position.y - y) < 1.5)
+        // Fingertips down 30° (1/3 of full) → the nose tips down 0.6 × 30° and it flies forward.
+        let t = run(&p, hands(up: 0.1, stick: Vec3(-1.0 / 3, 0, 0)), seconds: 4)
+        let expected = mrTilt(1.0 / 3)
+        #expect(abs(tilt(t) - expected) < 0.03)
+        #expect(t.state.orientation.act(BodyAxis.forward).y < 0)  // nose down
+        #expect(-t.state.velocity.z > 5)
     }
 
-    @Test func upAndForwardCombineAdditively() {
+    @Test func tiltIsCappedAtTheAngleLimit() {
         var p = airborne()
-        let t = run(&p, hand(up: 1, forward: 1), seconds: 7)
-        #expect(-t.state.velocity.z > drone.multirotor!.maxHorizontalSpeed - 1)    // full forward…
-        #expect(abs(t.state.velocity.y - drone.multirotor!.maxClimbRate) < 0.5)   // …and full climb
-        // The rotor disc is tilted forward and producing more than hover thrust at the same time.
-        let up = t.state.orientation.act(BodyAxis.up)
-        #expect(up.z < -0.02)   // tilted forward (at steady speed, just enough to beat drag)
-        #expect(t.achieved.force.y > drone.mass.mass * 9.81)
+        let t = run(&p, hands(up: 0.2, stick: Vec3(-1, 0, -1)), seconds: 3)
+        #expect(abs(tilt(t) - drone.multirotor!.maxTilt) < 0.03)
     }
 
-    @Test func stickAddsToTheHandAndSlidesAndTurns() {
+    @Test func rollingRightSlidesRightAndTwistingTurns() {
         var p = airborne()
-        // Hand half forward + stick tipped forward → faster than the hand alone.
-        var t = run(&p, hand(forward: 0.6), seconds: 8)
-        let handOnly = horizontalSpeed(t)
-        t = run(&p, hand(forward: 0.6, stick: Vec3(-0.8, 0, 0)), seconds: 8)
-        #expect(horizontalSpeed(t) > handOnly + 2)
-        // Roll right slides right; twist left turns left.
+        var t = run(&p, hands(up: 0.05, stick: Vec3(0, 0, -0.3)), seconds: 4)
+        #expect(t.state.velocity.x > 4)
+        #expect(abs(t.state.velocity.z) < 1)
         p = airborne()
-        t = run(&p, hand(stick: Vec3(0, 0, -1)), seconds: 6)
-        #expect(t.state.velocity.x > drone.multirotor!.maxHorizontalSpeed - 1)
-        p = airborne()
-        t = run(&p, hand(stick: Vec3(0, 1, 0)), seconds: 3)
+        t = run(&p, hands(stick: Vec3(0, 1, 0)), seconds: 3)
         #expect(IntentMapper.heading(t.state.orientation) > 1.0)
     }
 
-    @Test func releasingHoldsPositionAgainstAGust() {
+    @Test func aFlatStickHandLevelsTheDroneWhichThenCoasts() {
         var p = airborne()
-        let hold = p.state.position
-        p.state.velocity += Vec3(3, -1, 2)
-        let t = run(&p, hand(), seconds: 8)
-        #expect(simd_distance(t.state.position, hold) < 0.5)
+        _ = run(&p, hands(up: 0.1, stick: Vec3(-0.4, 0, 0)), seconds: 3)
+        let t = run(&p, hands(), seconds: 2)
+        #expect(tilt(t) < 0.02)
+        #expect(-t.state.velocity.z > 5)   // angle mode: no position hold
     }
 
     @Test func closedHandsHoverAndTurnHome() {
         var p = airborne()
-        _ = run(&p, hand(up: 0.5, forward: 1, stick: Vec3(0, 0.7, 0)), seconds: 5)
-        var t = run(&p, PilotInput(translation: Vec3(0, 1, -1), engaged: true, throttleClosed: true), seconds: 7)
-        #expect(simd_length(t.state.velocity) < 0.3)
-        t = run(&p, PilotInput(stickClosed: true), seconds: 6)
-        #expect(abs(IntentMapper.heading(t.state.orientation)) < 0.03)
-    }
-
-    @Test func loweringTheHandLands() {
-        var p = airborne()
-        let t = run(&p, hand(up: -1), seconds: 10)
-        #expect(t.wheelsOnGround == 4)
+        _ = run(&p, hands(up: 0.6, stick: Vec3(0, 0.7, 0)), seconds: 3)
+        var t = run(&p, PilotInput(engaged: true, throttleClosed: true), seconds: 6)
         #expect(abs(t.state.velocity.y) < 0.1)
+        t = run(&p, PilotInput(stickClosed: true, throttleClosed: true), seconds: 6)
+        #expect(abs(IntentMapper.heading(t.state.orientation)) < 0.03)
+        #expect(tilt(t) < 0.02)
     }
 
-    @Test func stickAloneCannotDragItAcrossThePad() {
+    @Test func stickTiltCannotTipItOnThePad() {
         var p = FlightPipeline(craft: drone)
-        let t = run(&p, hand(forward: 1, stick: Vec3(-1, 0, -1)), seconds: 3)
+        let t = run(&p, hands(stick: Vec3(-1, 0, -1)), seconds: 3)
         #expect(t.wheelsOnGround == 4)
         #expect(simd_length(t.state.velocity) < 0.05)
     }
+
+    private func mrTilt(_ normalized: Double) -> Double {
+        let mr = drone.multirotor!
+        return min(mr.tiltShaping.apply(normalized) * .pi / 2 * mr.tiltPerHandTilt, mr.maxTilt)
+    }
 }
 
-/// The interpreter turns the throttle hand's position (relative to its calibrated spot) into
-/// translation commands.
+/// The interpreter turns the throttle hand's height (relative to its calibrated spot) into the
+/// collective command.
 @Suite struct HandPositionInputTests {
     private let flat = Quat(ix: 0, iy: 0, iz: 0, r: 1)
 
@@ -153,7 +156,7 @@ import simd
         #expect(simd_distance(home, plane.centroid) < 1e-9)
     }
 
-    @Test func handOffsetBecomesUpAndForwardCommands() throws {
+    @Test func handHeightBecomesTheCollectiveCommand() throws {
         let (l0, r0) = frames(leftAt: .zero)
         let home = try #require(HandMetrics.plane(of: l0)).centroid
         var config = InterpreterConfiguration()
@@ -163,13 +166,13 @@ import simd
             calibration: HandCalibration(left: flat, right: flat, leftPosition: home,
                                          rightPosition: try #require(HandMetrics.plane(of: r0)).centroid))
         var input = PilotInput()
-        // 7.5 cm up and 15 cm forward: half climb, full forward.
+        // 7.5 cm up: half; moving it forward does nothing.
         for i in 0..<120 {
             let (l, r) = frames(leftAt: Vec3(0, 0.075, -0.15))
             input = interpreter.update(left: l, right: r, time: Double(i) / 90)
         }
         #expect(abs(input.translation.y - 0.5) < 0.02)
-        #expect(abs(input.translation.z - -1) < 0.02)
+        #expect(input.translation.z == 0)
         #expect(input.throttle == 0)
     }
 }
