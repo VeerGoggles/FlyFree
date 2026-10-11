@@ -42,12 +42,24 @@ import simd
         #expect(simd_length(pipeline.state.angularVelocity) < 0.01)
     }
 
-    @Test func velocityHoldReachesAndThenStops() {
+    @Test func fullThrottleKeepsAcceleratingTowardOneHundredTwentyKmPerSecond() {
+        #expect(craft.profile.maxForwardSpeed == 120_000)
         var pipeline = FlightPipeline(craft: craft, assist: .velocityHold)
+        var telemetry = pipeline.step(input: PilotInput(throttle: 1), dt: 1 / 90)
+        for _ in 0..<(90 * 30) { telemetry = pipeline.step(input: PilotInput(throttle: 1), dt: 1 / 90) }
+        // Main engines saturate at 120 kN on 12 t → 10 m/s² for the whole climb.
+        #expect(abs(telemetry.speed - 300) < 5)
+    }
+
+    @Test func velocityHoldReachesAndThenStops() {
+        // Velocity-loop behaviour, on a slow-capped variant so the target is reachable quickly.
+        var slow = craft
+        slow.profile.maxForwardSpeed = 120
+        var pipeline = FlightPipeline(craft: slow, assist: .velocityHold)
         let half = PilotInput(throttle: 0.3)
         var telemetry = pipeline.step(input: half, dt: 1 / 90)
         for _ in 0..<(90 * 20) { telemetry = pipeline.step(input: half, dt: 1 / 90) }
-        let target = -craft.profile.throttleShaping.apply(0.3) * craft.profile.maxForwardSpeed
+        let target = -slow.profile.throttleShaping.apply(0.3) * slow.profile.maxForwardSpeed
         #expect(abs(telemetry.state.velocity.z - target) < 1)
 
         // Throttle to zero: retro thrusters bring the craft to rest.

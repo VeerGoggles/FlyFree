@@ -15,8 +15,13 @@ final class CockpitScene {
     let cockpit = Entity()
     /// Rotates (but never translates) with the craft: infinitely distant stars and the sun.
     private let sky = Entity()
-    /// Rotates and translates with the craft: nearby objects for a sense of speed.
+    /// Rotates and translates with the craft: the gate course.
     private let world = Entity()
+    /// Rotates with the craft; its asteroids wrap around the craft in a repeating cube, so
+    /// there is always something streaming past, even at tens of km/s.
+    private let field = Entity()
+    private var asteroids: [(entity: ModelEntity, base: Vec3)] = []
+    private let fieldSize = 3000.0
     private var thrusterIndicators: [ModelEntity] = []
     private var handPaddles: [FlyFreeCore.Chirality: ModelEntity] = [:]
     private var paddleStyles: [FlyFreeCore.Chirality: PaddleStyle] = [:]
@@ -30,6 +35,7 @@ final class CockpitScene {
         flight.components.set(OpacityComponent(opacity: 0))
         flight.addChild(sky)
         flight.addChild(world)
+        flight.addChild(field)
         flight.addChild(cockpit)
         buildBackdrop()
         buildSky()
@@ -68,6 +74,15 @@ final class CockpitScene {
         sky.position = pivot
         world.orientation = inverse
         world.position = pivot + inverse.act(-position)
+        field.orientation = inverse
+        field.position = pivot
+
+        // Wrap in Double so positions stay precise however far the craft has flown.
+        for (entity, base) in asteroids {
+            var offset = base - s.position
+            offset -= fieldSize * ((offset + fieldSize / 2) / fieldSize).rounded(.down)
+            entity.position = SIMD3(Float(offset.x), Float(offset.y), Float(offset.z))
+        }
 
         for (indicator, command) in zip(thrusterIndicators, telemetry.actuatorCommands) {
             indicator.scale = SIMD3(repeating: 0.4 + 2.2 * Float(command))
@@ -181,11 +196,11 @@ final class CockpitScene {
         for _ in 0..<160 {
             let radius = 3 + rng.next() * 25
             let asteroid = ModelEntity(mesh: .generateSphere(radius: radius), materials: [rock])
-            var p = SIMD3<Float>(rng.next() * 2 - 1, rng.next() * 2 - 1, rng.next() * 2 - 1) * 1500
+            var p = Vec3(Double(rng.next()) * 2 - 1, Double(rng.next()) * 2 - 1, Double(rng.next()) * 2 - 1) * fieldSize / 2
             if simd_length(p) < 120 { p *= 4 }
-            asteroid.position = p
             asteroid.scale = [1, 0.6 + rng.next() * 0.8, 0.7 + rng.next() * 0.6]
-            world.addChild(asteroid)
+            field.addChild(asteroid)
+            asteroids.append((asteroid, p))
         }
 
         // A line of gates straight ahead to fly through.

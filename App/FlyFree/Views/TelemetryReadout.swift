@@ -23,7 +23,12 @@ struct TelemetryReadout: View {
                     }
                 }
             }
-            GridRow { Text("Speed"); Text(String(format: "%.1f m/s", telemetry.speed)) }
+            GridRow {
+                Text("Speed")
+                Text(telemetry.speed < 1000
+                     ? String(format: "%.1f m/s", telemetry.speed)
+                     : String(format: "%.2f km/s", telemetry.speed / 1000))
+            }
             GridRow {
                 Text("Hands")
                 Text("stick \(telemetry.input.dominantHandTracked ? "✓" : "✗")   throttle \(telemetry.input.throttleHandTracked ? "✓" : "✗")")

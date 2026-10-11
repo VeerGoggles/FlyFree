@@ -54,7 +54,7 @@ extension CraftCatalog {
             actuators: actuators,
             profile: ControlProfile(
                 maxAngularRate: Vec3(0.6, 0.5, 1.0),
-                maxForwardSpeed: 120,
+                maxForwardSpeed: 120_000,
                 maxStrafeSpeed: 10
             ),
             gains: ControllerGains(),
