@@ -23,6 +23,10 @@ public struct DesiredCraftState: Sendable, Equatable {
     public var angularAcceleration: Vec3 = .zero
     /// Feed-forward: how fast the velocity reference is changing (m/s², body).
     public var linearAcceleration: Vec3 = .zero
+    /// Aircraft: wheel brakes and speed brake.
+    public var brakes = false
+    /// Aircraft: only the thrust axis is velocity-controlled (lift and weight do the rest).
+    public var thrustAxisOnly = false
 
     public init(
         angularRate: Vec3 = .zero,

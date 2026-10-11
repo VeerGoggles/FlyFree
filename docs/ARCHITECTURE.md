@@ -153,6 +153,31 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
 - **Units:** SI (m, kg, s, N, N·m, rad). The UI shows degrees.
 - **Precision:** the core uses `Double`. Values are converted to `Float` only at the RealityKit boundary.
 
+## 5a. Aircraft (the jet)
+
+The jet runs through the same pipeline, with more physics and a fly-by-wire layer added to the intent stage:
+
+- **Environment (`Atmosphere`):** gravity, exponential air density, wind, and flat ground at y = 0.
+- **Airframe (`AerodynamicModel`):**
+  - Air data: airspeed, angle of attack α, sideslip β and dynamic pressure q̄.
+  - Lift, with a linear range and a post-stall drop; drag, made up of parasite, induced, stall and speed-brake drag; and side force.
+  - Stability and damping moments: pitch stiffness `Cmα`, `Cmq`; dihedral and roll damping; weathervane and yaw damping.
+- **Control surfaces:** the elevator, ailerons and rudder are `aeroSurface` actuators. Each is a pure moment per pascal, with commands from −1 to 1. The allocator receives per-actuator *effectiveness* (q̄ for surfaces) every physics step, so the same bounded least-squares solver flies vacuum thrusters and airspeed-dependent surfaces.
+- **Dynamic inversion:** the controller subtracts the airframe's own moments, so the surfaces only supply what is missing.
+- **Landing gear:** three spring-damper wheels with rolling, braking and cornering friction.
+- **Flight computer (`IntentMapper.aircraftReference`):**
+  - stick deltas plus coordinated-turn feed-forward (`g·tanφ/V` about world up);
+  - releasing the stick holds flight-path angle and bank, while heading follows the turn;
+  - α protection with pitch-rate look-ahead;
+  - closed stick: wings level, level flight;
+  - pedal: an autothrottle airspeed target; closed throttle hand: idle, speed brake and wheel brakes.
+- **Scenery:**
+  - sky dome and horizon haze, sun;
+  - an endless plain with a runway and edge lights;
+  - repeating trees, rocks and houses;
+  - snow-capped mountains and clouds;
+  - the Valley Run course (nine gates facing along the route).
+
 ## 6. Flight-sim direction
 
 See [`FLIGHT_MODEL.md`](FLIGHT_MODEL.md). It plans orientation changes **without** acceleration (spacecraft: decoupled, and thrust-coupled with a coupling slider) and **with** acceleration (aircraft: atmosphere, aerodynamic model, aero-surface allocation, fly-by-wire control modes), with milestones F1–F7.

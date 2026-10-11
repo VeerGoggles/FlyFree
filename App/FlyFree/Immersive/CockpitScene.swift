@@ -26,6 +26,14 @@ final class CockpitScene {
     private var dust: [(entity: ModelEntity, base: Vec3)] = []
     private let fieldSize = 3000.0
     private let dustSize = 90.0
+    /// Earth: scenery that repeats horizontally around the craft at fixed heights.
+    private var clutter: [(entity: Entity, base: Vec3)] = []
+    private var clouds: [(entity: Entity, base: Vec3)] = []
+    private let clutterSize = 4000.0
+    private let cloudSize = 12000.0
+    private let ground = Entity()
+    private let horizon = Entity()
+    private let flightPathMarker = Entity()
 
     private var gates: [(gate: Gate, ring: ModelEntity, halo: ModelEntity)] = []
     private var gateStyles: [Int: GateStyle] = [:]
@@ -45,10 +53,16 @@ final class CockpitScene {
         flight.components.set(OpacityComponent(opacity: 0))
         for e in [sky, field, world, cockpit] { flight.addChild(e) }
 
-        buildBackdrop()
-        buildSky()
-        buildField()
+        switch craft.world {
+        case .deepSpace:
+            buildBackdrop()
+            buildSky()
+            buildField()
+        case .earth:
+            buildEarth()
+        }
         buildCourse(course)
+        buildFlightPathMarker()
         buildCockpit(style: craft.cockpit)
 
         for chirality in FlyFreeCore.Chirality.allCases {
@@ -103,14 +117,49 @@ final class CockpitScene {
         // Wrap in Double so positions stay precise however far the craft has flown.
         wrap(asteroids, around: s.position, size: fieldSize)
         wrap(dust, around: s.position, size: dustSize)
+        wrap(clutter, around: s.position, size: clutterSize, horizontalOnly: true)
+        wrap(clouds, around: s.position, size: cloudSize, horizontalOnly: true)
+        ground.position = SIMD3(position.x, 0, position.z)  // an endless plain under the craft
+        horizon.position = SIMD3(0, -position.y, 0)
+
+        // Flight-path marker: where the craft is actually going, in cockpit (body) axes.
+        let v = telemetry.air?.bodyAirVelocity ?? s.orientation.inverse.act(s.velocity)
+        let speed = simd_length(v)
+        flightPathMarker.isEnabled = speed > 3 && model.phase != .calibrating(initial: true)
+        if speed > 3 {
+            let dir = SIMD3<Float>(Float(v.x / speed), Float(v.y / speed), Float(v.z / speed))
+            flightPathMarker.position = pivot + dir * 12
+            flightPathMarker.look(at: pivot, from: flightPathMarker.position, relativeTo: cockpit)
+        }
     }
 
-    private func wrap(_ items: [(entity: ModelEntity, base: Vec3)], around position: Vec3, size: Double) {
+    private func wrap<E: Entity>(_ items: [(entity: E, base: Vec3)], around position: Vec3, size: Double,
+                                 horizontalOnly: Bool = false) {
         for (entity, base) in items {
             var offset = base - position
-            offset -= size * ((offset + size / 2) / size).rounded(.down)
+            var wrapped = offset - size * ((offset + size / 2) / size).rounded(.down)
+            if horizontalOnly { wrapped.y = offset.y }
+            offset = wrapped
             entity.position = SIMD3(Float(offset.x), Float(offset.y), Float(offset.z))
         }
+    }
+
+    // MARK: - Flight-path marker
+
+    private func buildFlightPathMarker() {
+        let green = MeshFactory.glow(.holoGreen, opacity: 0.9)
+        let ring = ModelEntity(mesh: MeshFactory.annulus(inner: 0.16, outer: 0.2), materials: [green])
+        ring.orientation = simd_quatf(angle: .pi / 2, axis: [1, 0, 0])  // face along the line of sight
+        flightPathMarker.addChild(ring)
+        for x: Float in [-0.32, 0.32] {
+            let wing = ModelEntity(mesh: .generateBox(size: [0.2, 0.025, 0.01]), materials: [green])
+            wing.position = [x, 0, 0]
+            flightPathMarker.addChild(wing)
+        }
+        let fin = ModelEntity(mesh: .generateBox(size: [0.025, 0.14, 0.01]), materials: [green])
+        fin.position = [0, 0.25, 0]
+        flightPathMarker.addChild(fin)
+        cockpit.addChild(flightPathMarker)
     }
 
     private func updateHands(_ model: AppModel) {
@@ -143,21 +192,26 @@ final class CockpitScene {
     private enum GateStyle: Equatable { case pending, next, passed, flash }
 
     private func buildCourse(_ course: Course) {
-        let ringMesh = MeshFactory.torus(major: 26, minor: 0.7)
-        let haloMesh = MeshFactory.torus(major: 26, minor: 2.2, sides: 8)
+        // Unit ring (radius 1), scaled per gate and turned to face along the gate's direction.
+        let ringMesh = MeshFactory.torus(major: 1.04, minor: 0.028)
+        let haloMesh = MeshFactory.torus(major: 1.04, minor: 0.085, sides: 8)
+        let lightMesh = MeshResource.generateSphere(radius: 0.05)
         for gate in course.gates {
             let ring = ModelEntity(mesh: ringMesh)
             let halo = ModelEntity(mesh: haloMesh)
             let c = gate.center
+            let d = gate.direction
+            let facing = simd_quatf(from: [0, 0, -1], to: SIMD3(Float(d.x), Float(d.y), Float(d.z)))
             for e in [ring, halo] {
                 e.position = SIMD3(Float(c.x), Float(c.y), Float(c.z))
+                e.orientation = facing
+                e.scale = SIMD3(repeating: Float(gate.radius))
                 world.addChild(e)
             }
-            // Four marker lights on the ring.
             for k in 0..<4 {
                 let a = Float(k) * .pi / 2 + .pi / 4
-                let light = ModelEntity(mesh: .generateSphere(radius: 1.3), materials: [MeshFactory.glow(.white)])
-                light.position = SIMD3(cos(a) * 26, sin(a) * 26, 0)
+                let light = ModelEntity(mesh: lightMesh, materials: [MeshFactory.glow(.white)])
+                light.position = SIMD3(cos(a), sin(a), 0) * 1.04
                 ring.addChild(light)
             }
             gates.append((gate, ring, halo))
@@ -174,11 +228,12 @@ final class CockpitScene {
             case .passed(let at): style = model.clock - at < 0.5 ? .flash : .passed
             }
             // The next gate breathes so it's easy to find.
+            let r = Float(gate.radius)
             if style == .next {
                 let pulse = 1 + 0.04 * Float(sin(model.clock * 5))
-                halo.scale = SIMD3(pulse, pulse, 1)
+                halo.scale = SIMD3(r * pulse, r * pulse, r)
             } else {
-                halo.scale = .one
+                halo.scale = SIMD3(repeating: r)
             }
             guard gateStyles[gate.id] != style else { continue }
             gateStyles[gate.id] = style
@@ -190,6 +245,147 @@ final class CockpitScene {
             }
             ring.model?.materials = [MeshFactory.glow(color, opacity: ringOpacity)]
             halo.model?.materials = [MeshFactory.glow(color, opacity: haloOpacity)]
+        }
+    }
+
+    // MARK: - Earth
+
+    private func buildEarth() {
+        var rng = SeededRandom(seed: 1903)
+
+        // Sky dome and horizon haze.
+        let skyDome = ModelEntity(mesh: .generateSphere(radius: 14000),
+                                  materials: [MeshFactory.glow(UIColor(red: 0.42, green: 0.64, blue: 0.92, alpha: 1))])
+        skyDome.scale = [-1, 1, 1]
+        sky.addChild(skyDome)
+
+        field.addChild(horizon)
+        for (radius, height, opacity) in [(12500, 900, 0.55), (12000, 2200, 0.3), (11500, 4500, 0.15)] as [(Float, Float, Float)] {
+            horizon.addChild(ModelEntity(mesh: MeshFactory.band(radius: radius, height: height),
+                                         materials: [MeshFactory.glow(UIColor(red: 0.85, green: 0.9, blue: 0.97, alpha: 1), opacity: opacity)]))
+        }
+
+        // Sun and its light.
+        let sunDirection = simd_normalize(SIMD3<Float>(0.4, 0.55, 0.35))
+        let sun = Entity()
+        sun.position = sunDirection * 12000
+        sun.addChild(ModelEntity(mesh: .generateSphere(radius: 260), materials: [MeshFactory.glow(UIColor(red: 1, green: 0.98, blue: 0.9, alpha: 1))]))
+        sun.addChild(ModelEntity(mesh: .generateSphere(radius: 700), materials: [MeshFactory.glow(UIColor(red: 1, green: 0.95, blue: 0.8, alpha: 1), opacity: 0.18)]))
+        sky.addChild(sun)
+        let light = DirectionalLight()
+        light.light.intensity = 6000
+        light.look(at: .zero, from: sunDirection * 100, relativeTo: nil)
+        sky.addChild(light)
+
+        // Endless plain (follows the craft horizontally).
+        var grass = PhysicallyBasedMaterial()
+        grass.baseColor = .init(tint: UIColor(red: 0.33, green: 0.45, blue: 0.24, alpha: 1))
+        grass.roughness = 1.0
+        ground.addChild(ModelEntity(mesh: .generatePlane(width: 26000, depth: 26000), materials: [grass]))
+        world.addChild(ground)
+
+        buildRunway()
+
+        // Mountains ringing the valley.
+        let rockTones: [UIColor] = [UIColor(red: 0.42, green: 0.4, blue: 0.36, alpha: 1), UIColor(red: 0.36, green: 0.42, blue: 0.32, alpha: 1)]
+        let snow = PhysicallyBasedMaterial.make(UIColor(white: 0.95, alpha: 1), roughness: 0.6)
+        for i in 0..<46 {
+            let a = Float(i) / 46 * 2 * .pi + rng.next() * 0.1
+            let distance = 7500 + rng.next() * 4000
+            let radius = 700 + rng.next() * 1300
+            let height = radius * (0.6 + rng.next() * 0.7)
+            let mountain = ModelEntity(mesh: .generateSphere(radius: 1),
+                                       materials: [PhysicallyBasedMaterial.make(rockTones[i % 2], roughness: 1)])
+            mountain.scale = [radius, height, radius * (0.8 + rng.next() * 0.4)]
+            mountain.position = [cos(a) * distance + 3000, 0, sin(a) * distance - 5000]
+            if height > 1100 {
+                let cap = ModelEntity(mesh: .generateSphere(radius: 1), materials: [snow])
+                cap.scale = [0.42, 0.25, 0.42]
+                cap.position = [0, 0.86, 0]
+                mountain.addChild(cap)
+            }
+            world.addChild(mountain)
+        }
+
+        // Ground clutter — trees, rocks, buildings — repeating around the craft: speed cues low down.
+        let tree = PhysicallyBasedMaterial.make(UIColor(red: 0.16, green: 0.3, blue: 0.14, alpha: 1), roughness: 1)
+        let stone = PhysicallyBasedMaterial.make(UIColor(white: 0.5, alpha: 1), roughness: 0.9)
+        let roof = PhysicallyBasedMaterial.make(UIColor(red: 0.55, green: 0.3, blue: 0.22, alpha: 1), roughness: 0.8)
+        let sphere = MeshResource.generateSphere(radius: 1), cube = MeshResource.generateBox(size: 1)
+        for i in 0..<420 {
+            let e = Entity()
+            switch i % 6 {
+            case 0, 1, 2, 3:
+                let h = 8 + rng.next() * 14
+                let crown = ModelEntity(mesh: sphere, materials: [tree])
+                crown.scale = [h * 0.3, h * 0.55, h * 0.3]
+                crown.position = [0, h * 0.55, 0]
+                e.addChild(crown)
+            case 4:
+                let r = 3 + rng.next() * 6
+                let rock = ModelEntity(mesh: sphere, materials: [stone])
+                rock.scale = [r, r * 0.6, r * 0.8]
+                e.addChild(rock)
+            default:
+                let w = 10 + rng.next() * 20
+                let house = ModelEntity(mesh: cube, materials: [stone])
+                house.scale = [w, w * 0.6, w * 0.8]
+                house.position = [0, w * 0.3, 0]
+                let top = ModelEntity(mesh: cube, materials: [roof])
+                top.scale = [w * 1.05, w * 0.15, w * 0.85]
+                top.position = [0, w * 0.67, 0]
+                e.addChild(house)
+                e.addChild(top)
+            }
+            var p = Vec3(Double(rng.next()) - 0.5, 0, Double(rng.next()) - 0.5) * clutterSize
+            if abs(p.x) < 60 { p.x += p.x < 0 ? -60 : 60 }  // keep the runway clear
+            field.addChild(e)
+            clutter.append((e, p))
+        }
+
+        // Clouds: soft clusters at 700–1600 m.
+        let cloud = MeshFactory.glow(.white, opacity: 0.82)
+        let shade = MeshFactory.glow(UIColor(white: 0.86, alpha: 1), opacity: 0.75)
+        for _ in 0..<60 {
+            let cluster = Entity()
+            for k in 0..<6 {
+                let puff = ModelEntity(mesh: sphere, materials: [k < 2 ? shade : cloud])
+                let r = 60 + rng.next() * 110
+                puff.scale = [r * 1.3, r * 0.55, r]
+                puff.position = [rng.next() * 260 - 130, Float(k < 2 ? 0 : 25) + rng.next() * 30, rng.next() * 200 - 100]
+                cluster.addChild(puff)
+            }
+            let p = Vec3((Double(rng.next()) - 0.5) * cloudSize, 700 + Double(rng.next()) * 900, (Double(rng.next()) - 0.5) * cloudSize)
+            field.addChild(cluster)
+            clouds.append((cluster, p))
+        }
+    }
+
+    private func buildRunway() {
+        let asphalt = PhysicallyBasedMaterial.make(UIColor(white: 0.2, alpha: 1), roughness: 0.9)
+        let paint = PhysicallyBasedMaterial.make(UIColor(white: 0.92, alpha: 1), roughness: 0.6)
+        let runway = ModelEntity(mesh: .generateBox(size: [45, 0.1, 3000]), materials: [asphalt])
+        runway.position = [0, 0.02, -1300]
+        world.addChild(runway)
+        for i in 0..<48 {
+            let dash = ModelEntity(mesh: .generateBox(size: [0.9, 0.12, 30]), materials: [paint])
+            dash.position = [0, 0.03, 150 - Float(i) * 60]
+            world.addChild(dash)
+        }
+        for end: Float in [170, -2770] {
+            for k in 0..<8 {
+                let bar = ModelEntity(mesh: .generateBox(size: [1.8, 0.12, 30]), materials: [paint])
+                bar.position = [Float(k - 4) * 4.5 + 2.25, 0.03, end]
+                world.addChild(bar)
+            }
+        }
+        let edge = MeshFactory.glow(UIColor(red: 1, green: 0.95, blue: 0.7, alpha: 1))
+        for i in 0..<50 {
+            for x: Float in [-23.5, 23.5] {
+                let lamp = ModelEntity(mesh: .generateSphere(radius: 0.35), materials: [edge])
+                lamp.position = [x, 0.4, 200 - Float(i) * 60]
+                world.addChild(lamp)
+            }
         }
     }
 
@@ -333,7 +529,7 @@ final class CockpitScene {
         }
 
         // Canopy frame.
-        let height: Float = style == .fighterCanopy ? 1.75 : 2.05
+        let height: Float = style == .fighterCanopy ? 2.0 : 2.05
         let sill: [SIMD3<Float>] = [[-0.8, 0.9, -0.8], [0.8, 0.9, -0.8], [0.9, 0.9, 0.4], [-0.9, 0.9, 0.4]]
         for i in 0..<sill.count { strut(from: sill[i], to: sill[(i + 1) % sill.count]) }
         strut(from: [-0.8, 0.9, -0.8], to: [-0.45, height, -0.35])

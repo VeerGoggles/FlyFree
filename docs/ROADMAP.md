@@ -40,6 +40,8 @@ Each phase ends with something you can fly. Checked items are already in the rep
 - [ ] Per-craft Reality Composer Pro cockpit assets
 
 ## Phase 3: Atmosphere (v0.4), detailed in [FLIGHT_MODEL.md](FLIGHT_MODEL.md) as milestones F1–F7
+- [x] Atmospheric jet: aerodynamics, control surfaces, landing gear, fly-by-wire, runway, Valley Run course
+- [x] Flight-path marker
 - [ ] F1/F2: velocity-coupling slider, flight-path marker, turn-acceleration limit, drift-kill
 - [ ] `Atmosphere` environment: density by altitude, wind, turbulence
 - [ ] Aerodynamic-surface actuators (aileron, elevator, rudder, flaps), with effectiveness that scales with dynamic pressure

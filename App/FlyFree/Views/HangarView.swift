@@ -27,7 +27,7 @@ struct HangarView: View {
                             }
                         }
                     }
-                    ForEach(["Atmospheric Jet", "Lunar Lander", "Quadcopter"], id: \.self) { name in
+                    ForEach(["Lunar Lander", "Quadcopter"], id: \.self) { name in
                         Label("\(name) — coming soon", systemImage: "lock").foregroundStyle(.tertiary)
                     }
                 }
@@ -37,9 +37,11 @@ struct HangarView: View {
                         Text("Right").tag(FlyFreeCore.Chirality.right)
                         Text("Left").tag(FlyFreeCore.Chirality.left)
                     }
-                    Picker("Flight assist", selection: $model.flightAssist) {
-                        Text("Velocity hold").tag(FlightAssistMode.velocityHold)
-                        Text("Off (Newtonian)").tag(FlightAssistMode.off)
+                    if !model.isAircraft {
+                        Picker("Flight assist", selection: $model.flightAssist) {
+                            Text("Velocity hold").tag(FlightAssistMode.velocityHold)
+                            Text("Off (Newtonian)").tag(FlightAssistMode.off)
+                        }
                     }
                     Toggle("Invert pitch", isOn: $model.invertPitch)
                     Picker("Input", selection: $model.inputSource) {
@@ -52,12 +54,18 @@ struct HangarView: View {
                     Hold both hands out flat, palms down, until they lock in — the cockpit fades in around you.
                     Stick hand: tip fingertips up/down to pitch, turn the wrist left/right to yaw, rotate the forearm to roll. Close it to return to the starting orientation.
                     Throttle hand is a pedal: push fingertips down to accelerate, level to hold speed, tip up to brake. Close it to brake to a stop.
+                    Jet: the pedal sets the autothrottle's airspeed. Let go of the stick to hold your climb and bank; close it for wings-level, level flight. Rotate at about 90 m/s to take off.
                     """)
                 }
             }
             .navigationTitle("FlyFree")
             .task {
                 // Development aid: `-FlyFreeAutoLaunch` skips the hangar (e.g. for simulator runs).
+                // `-FlyFreeCraft <id>` preselects a craft.
+                if let id = UserDefaults.standard.string(forKey: "FlyFreeCraft"),
+                   let craft = CraftCatalog.all.first(where: { $0.id == id }) {
+                    model.craft = craft
+                }
                 if ProcessInfo.processInfo.arguments.contains("-FlyFreeAutoLaunch"),
                    model.immersiveSpaceState == .closed {
                     launch()

@@ -52,6 +52,7 @@ final class AppModel {
     private(set) var pipeline: FlightPipeline
     private(set) var telemetry: FlightTelemetry?
     private(set) var course = CourseTracker(course: CourseCatalog.asteroidSlalom)
+    var isAircraft: Bool { craft.aircraft != nil }
     /// Most recent gate pass and when it happened (session clock), for score effects.
     private(set) var lastGateEvent: (event: CourseTracker.Event, time: Double)?
     /// Seconds since the session started.
@@ -87,7 +88,7 @@ final class AppModel {
         pipeline = FlightPipeline(craft: craft, interpreter: config, calibration: calibration,
                                   assist: flightAssist)
         telemetry = nil
-        course = CourseTracker(course: CourseCatalog.asteroidSlalom)
+        course = CourseTracker(course: craft.course)
         lastGateEvent = nil
         isNewBest = false
         bestTime = UserDefaults.standard.object(forKey: bestTimeKey) as? Double

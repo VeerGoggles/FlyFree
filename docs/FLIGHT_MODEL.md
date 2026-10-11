@@ -84,6 +84,20 @@ Supporting work:
 
 ## 4. Milestones
 
+**Status:**
+- **F3–F6 are implemented for the jet:**
+  - `Atmosphere` and `AerodynamicModel`;
+  - q̄-scaled control-surface allocation;
+  - coordinated turns, flight-path and bank hold, α protection;
+  - runway, landing gear and brakes;
+  - tests covering take-off, coordinated turn (g·tanφ/V), level hold, stall protection, autothrottle and braking.
+- **The flight-path marker from F1 is in.**
+- **Still to do:**
+  - the velocity-coupling slider for spacecraft (F1/F2);
+  - a G-command mode and g-limiting;
+  - a glider;
+  - the space-plane (F7).
+
 | # | Milestone | Proves |
 |---|---|---|
 | F1 | `velocityCoupling` slider plus flight-path marker | Orientation without acceleration is controllable and visible |

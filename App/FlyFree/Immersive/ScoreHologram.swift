@@ -73,11 +73,14 @@ final class ScoreHologram {
     private func set(_ entity: ModelEntity, _ text: String, size: CGFloat, color: UIColor) {
         let mesh = MeshResource.generateText(text, extrusionDepth: 0.001,
                                              font: .monospacedSystemFont(ofSize: size, weight: .semibold))
-        // Centre the text on its anchor.
+        // Centre the text on its anchor; update the existing child in place so it never flickers.
         let b = mesh.bounds
-        entity.children.forEach { $0.removeFromParent() }
-        let child = ModelEntity(mesh: mesh, materials: [MeshFactory.glow(color, opacity: 0.92)])
+        let child = entity.children.first as? ModelEntity ?? {
+            let e = ModelEntity()
+            entity.addChild(e)
+            return e
+        }()
+        child.model = ModelComponent(mesh: mesh, materials: [MeshFactory.glow(color, opacity: 0.92)])
         child.position = [-b.center.x, -b.center.y, 0]
-        entity.addChild(child)
     }
 }

@@ -31,7 +31,12 @@ public struct FlightController: Sendable {
         self.maxHoldRate = maxHoldRate
     }
 
-    public func demand(desired: DesiredCraftState, state: RigidBodyState) -> Wrench {
+    /// - Parameters:
+    ///   - airframeTorque: moments the airframe already produces (stability, damping); the
+    ///     controller subtracts them so surfaces only supply the difference (dynamic inversion).
+    ///   - bodyAirVelocity: for aircraft, the autothrottle tracks air-relative speed.
+    public func demand(desired: DesiredCraftState, state: RigidBodyState,
+                       airframeTorque: Vec3 = .zero, bodyAirVelocity: Vec3? = nil) -> Wrench {
         var targetRate = desired.angularRate
         if let attitude = desired.attitude {
             // Attitude error as a body-frame rotation vector.
@@ -42,15 +47,17 @@ public struct FlightController: Sendable {
         let omega = state.angularVelocity
         let inertia = mass.inertia
         let torque = inertia * (desired.angularAcceleration + gains.rate * (targetRate - omega))
-            + simd_cross(omega, inertia * omega)
+            + simd_cross(omega, inertia * omega) - airframeTorque
 
         let force: Vec3
         switch desired.assist {
         case .off:
             force = BodyAxis.forward * desired.thrustFraction * maxForwardThrust
         case .velocityHold:
-            let bodyVelocity = state.orientation.inverse.act(state.velocity)
-            force = (desired.linearAcceleration + (desired.bodyVelocity - bodyVelocity) * gains.velocity) * mass.mass
+            let bodyVelocity = bodyAirVelocity ?? state.orientation.inverse.act(state.velocity)
+            var f = (desired.linearAcceleration + (desired.bodyVelocity - bodyVelocity) * gains.velocity) * mass.mass
+            if desired.thrustAxisOnly { f = Vec3(0, 0, f.z) }
+            force = f
         }
         return Wrench(force: force, torque: torque)
     }

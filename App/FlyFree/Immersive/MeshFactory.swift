@@ -54,6 +54,21 @@ enum MeshFactory {
         return try! MeshResource.generate(from: [d])
     }
 
+    /// Vertical cylindrical wall (no caps), visible from both sides — horizon haze.
+    static func band(radius: Float, height: Float, segments: Int = 96) -> MeshResource {
+        var positions: [SIMD3<Float>] = []
+        var indices: [UInt32] = []
+        for i in 0...segments {
+            let a = Float(i) / Float(segments) * 2 * .pi
+            positions += [SIMD3(cos(a) * radius, 0, sin(a) * radius), SIMD3(cos(a) * radius, height, sin(a) * radius)]
+        }
+        for i in 0..<UInt32(segments) {
+            let a = i * 2, b = a + 1, c = a + 2, d = a + 3
+            indices += [a, c, b, b, c, d, a, b, c, b, d, c]
+        }
+        return mesh("band", positions, indices)
+    }
+
     /// Flat arrowhead in the XZ plane pointing -Z, both sides.
     static func chevron(width: Float, length: Float) -> MeshResource {
         let p: [SIMD3<Float>] = [[0, 0, -length], [-width / 2, 0, 0], [0, 0, -length * 0.35], [width / 2, 0, 0]]
@@ -101,6 +116,15 @@ enum MeshFactory {
         d.positions = MeshBuffer(positions)
         d.primitives = .triangles(indices)
         return try! MeshResource.generate(from: [d])
+    }
+}
+
+extension PhysicallyBasedMaterial {
+    static func make(_ color: UIColor, roughness: Float) -> PhysicallyBasedMaterial {
+        var m = PhysicallyBasedMaterial()
+        m.baseColor = .init(tint: color)
+        m.roughness = .init(floatLiteral: roughness)
+        return m
     }
 }
 

@@ -30,6 +30,18 @@ struct TelemetryReadout: View {
                      ? String(format: "%.1f m/s", telemetry.speed)
                      : String(format: "%.2f km/s", telemetry.speed / 1000))
             }
+            if let air = telemetry.air {
+                GridRow { Text("Airspeed"); Text(String(format: "%.0f m/s  (%.0f kt)", air.airspeed, air.airspeed * 1.944)) }
+                GridRow { Text("Altitude"); Text(String(format: "%.0f m", air.altitude)) }
+                GridRow {
+                    Text("AoA / G")
+                    HStack {
+                        Text(String(format: "%.1f°  %.1f g", air.alpha * 180 / .pi, telemetry.loadFactor))
+                        if air.alpha > 0.2 { Text("AoA LIMIT").bold().foregroundStyle(.orange) }
+                        if telemetry.onGround { Text("ON GROUND").bold().foregroundStyle(.green) }
+                    }
+                }
+            }
             GridRow {
                 Text("Hands")
                 Text("stick \(telemetry.input.dominantHandTracked ? "✓" : "✗")   throttle \(telemetry.input.throttleHandTracked ? "✓" : "✗")")
