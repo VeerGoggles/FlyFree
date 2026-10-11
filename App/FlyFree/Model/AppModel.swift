@@ -32,7 +32,6 @@ final class AppModel {
     var craft: CraftDefinition = CraftCatalog.genericSpacecraft
     var dominantHand: FlyFreeCore.Chirality = .right
     var flightAssist: FlightAssistMode = .velocityHold
-    var controlFrame: ControlFrame = .global
     var invertPitch = false
     #if targetEnvironment(simulator)
     var inputSource: InputSource = .simulated
@@ -82,7 +81,7 @@ final class AppModel {
         var craft = craft
         craft.profile.invertPitch = invertPitch
         pipeline = FlightPipeline(craft: craft, interpreter: config, calibration: calibration,
-                                  assist: flightAssist, controlFrame: controlFrame)
+                                  assist: flightAssist)
         telemetry = nil
         course = CourseTracker(course: CourseCatalog.asteroidSlalom)
         lastGateEvent = nil

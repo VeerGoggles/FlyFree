@@ -69,15 +69,15 @@ private func hand(_ c: Chirality, yaw: Double = 0, pitch: Double = 0, roll: Doub
             _ = pipeline.step(input: full, dt: 1 / 90); t += 1 / 90
         }
         let spinUp = t
-        // 0.6 rad/s at 0.4 rad/s² ≈ 1.5 s plus tracking lag.
-        #expect(spinUp > 1.3 && spinUp < 2.2)
+        // 0.6 rad/s at 1.2 rad/s² ≈ 0.5 s.
+        #expect(spinUp > 0.4 && spinUp < 0.7)
 
         t = 0
         while simd_length(pipeline.state.angularVelocity) > 0.01, t < 5 {
             _ = pipeline.step(input: PilotInput(engaged: true), dt: 1 / 90); t += 1 / 90
         }
-        // 0.6 rad/s at 1.2 rad/s² ≈ 0.5 s; well under the old ~3 s.
-        #expect(t < 0.9)
+        // 0.6 rad/s at 2.4 rad/s² ≈ 0.25 s.
+        #expect(t < 0.45)
     }
 
     @Test func closedStickReturnsToResetAttitude() {

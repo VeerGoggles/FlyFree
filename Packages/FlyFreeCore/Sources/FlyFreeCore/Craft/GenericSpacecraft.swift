@@ -5,8 +5,9 @@ extension CraftCatalog {
     public static let genericSpacecraft: CraftDefinition = {
         let width = 6.0, height = 3.0, length = 14.0
         let nose = -length / 2 + 1, tail = length / 2 - 1
-        // Sized so the craft can brake (rotation and speed) about 3× harder than it speeds up.
-        let rcsForce = 25_000.0
+        // Sized so the craft can reach and stop rotations quickly (up to ~2.5 rad/s² in pitch/yaw)
+        // and brake about 3× harder than it speeds up.
+        let rcsForce = 50_000.0
         let retroForce = 75_000.0
 
         var actuators: [Actuator] = [
@@ -57,8 +58,8 @@ extension CraftCatalog {
             profile: ControlProfile(
                 maxAngularRate: Vec3(0.6, 0.5, 1.0),
                 // Rotation and translation are tuned independently.
-                angularAcceleration: Vec3(0.4, 0.4, 0.6),   // rad/s² spin-up
-                angularDeceleration: Vec3(1.2, 1.2, 1.8),   // rad/s² spin-down
+                angularAcceleration: Vec3(1.2, 1.2, 1.8),   // rad/s² spin-up   (max rate in ~0.5 s)
+                angularDeceleration: Vec3(2.4, 2.4, 3.6),   // rad/s² spin-down (stops in ~0.25 s)
                 linearAcceleration: 4,                       // m/s² (was 10)
                 linearDeceleration: 12,                      // m/s² braking
                 maxForwardSpeed: 120_000,

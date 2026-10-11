@@ -1,16 +1,3 @@
-/// The frame the stick's rotation is expressed in.
-public enum ControlFrame: String, Sendable, CaseIterable, Identifiable {
-    /// The global (launch) frame. Tipping your fingertips up always rotates the ship about the
-    /// same world axis — the one your hand rotated about — whatever the ship's current attitude.
-    /// The command is re-projected into the ship's current frame with its quaternion every step,
-    /// so the hand, the attitude hologram and the ship always agree.
-    case global
-    /// The ship's own body axes, like a conventional cockpit stick: "pitch up" is always nose-up
-    /// relative to the pilot's seat.
-    case body
-    public var id: String { rawValue }
-}
-
 /// How throttle is interpreted.
 public enum FlightAssistMode: String, Sendable, CaseIterable, Identifiable {
     /// Throttle = fraction of main-engine thrust (negative = retro). Pure Newtonian.

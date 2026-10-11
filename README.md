@@ -25,7 +25,7 @@ That 3D hand motion becomes a *desired craft state* in the craft's current frame
 | Closed hands: reset orientation (stick), brake to a stop (throttle) | |
 | Separate acceleration limits for rotation and speed; braking about 3× stronger than speeding up | |
 | Gate course with flown-through states and a holographic score | |
-| Quaternion navigation: the stick works in the global frame at any attitude (or ship axes, as an option) | |
+| Quaternion navigation: stick deltas apply about the ship's current axes, identically at any attitude | |
 | Hand holograms: ship attitude over the stick hand, live thrusters over the throttle hand | |
 | Holographic hand plates; sun, ringed planet, nebula, space dust | |
 | Rate-command / attitude-hold control in the craft's own frame | |

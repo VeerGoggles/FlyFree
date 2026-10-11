@@ -42,14 +42,12 @@ public struct FlightPipeline: Sendable {
         interpreter: InterpreterConfiguration = .init(),
         calibration: HandCalibration? = nil,
         assist: FlightAssistMode = .velocityHold,
-        controlFrame: ControlFrame = .global,
         environment: any FlightEnvironment = DeepSpace(),
         initialState: RigidBodyState = .init()
     ) {
         self.craft = craft
         self.interpreter = PilotInputInterpreter(configuration: interpreter, calibration: calibration)
-        self.mapper = IntentMapper(profile: craft.profile, assist: assist, frame: controlFrame,
-                                   resetAttitude: initialState.orientation)
+        self.mapper = IntentMapper(profile: craft.profile, assist: assist, resetAttitude: initialState.orientation)
         self.controller = FlightController(gains: craft.gains, mass: craft.mass,
                                            maxForwardThrust: craft.maxForwardThrust,
                                            maxHoldRate: craft.profile.maxAngularRate * 0.25)

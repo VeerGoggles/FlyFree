@@ -13,7 +13,6 @@ import simd
 public struct IntentMapper: Sendable {
     public var profile: ControlProfile
     public var assist: FlightAssistMode
-    public var frame: ControlFrame
     /// Attitude a closed stick hand returns the craft to (the launch attitude).
     public var resetAttitude: Quat
     /// Fraction of max forward speed / thrust available in reverse.
@@ -23,17 +22,13 @@ public struct IntentMapper: Sendable {
 
     /// Rate reference in body axes (what the controller tracks).
     private var rateReference = Vec3.zero
-    /// Global-frame mode: the same reference held in world axes, so it stays fixed in space
-    /// as the ship turns.
-    private var worldRateReference = Vec3.zero
     private var velocityReference = Vec3.zero
     private var heldAttitude: Quat?
 
-    public init(profile: ControlProfile, assist: FlightAssistMode, frame: ControlFrame = .global,
+    public init(profile: ControlProfile, assist: FlightAssistMode,
                 resetAttitude: Quat = Quat(ix: 0, iy: 0, iz: 0, r: 1)) {
         self.profile = profile
         self.assist = assist
-        self.frame = frame
         self.resetAttitude = resetAttitude
     }
 
@@ -53,38 +48,25 @@ public struct IntentMapper: Sendable {
     private mutating func reference(_ input: PilotInput, state: RigidBodyState, dt: Double) -> DesiredCraftState {
         let bodyVelocity = state.orientation.inverse.act(state.velocity)
 
-        // Rotation. Attitude is never decomposed into angles: every frame change is a quaternion
-        // rotation of a vector, so there is no gimbal lock at any attitude.
-        let q = state.orientation
+        // Rotation: the hand commands a *delta* — a rotation rate about the ship's own current
+        // axes — so a yaw gesture yaws the ship the same way whatever its attitude. Attitude is
+        // never decomposed into angles (quaternions throughout), so there is no gimbal lock.
         var targetRate = Vec3.zero  // body axes
         if input.engaged {
-            var pilotRate = Vec3.zero  // axes of the pilot's hand frame
             for axis in 0..<3 {
-                pilotRate[axis] = profile.rotationShaping.apply(input.rotation[axis]) * profile.maxAngularRate[axis]
+                targetRate[axis] = profile.rotationShaping.apply(input.rotation[axis]) * profile.maxAngularRate[axis]
             }
-            if profile.invertPitch { pilotRate.x = -pilotRate.x }
-            switch frame {
-            case .body:
-                targetRate = pilotRate
-            case .global:
-                // Hand frame ≙ launch frame → world → the ship's *current* body frame.
-                targetRate = Self.limit(q.inverse.act(resetAttitude.act(pilotRate)), to: profile.maxAngularRate)
-            }
+            if profile.invertPitch { targetRate.x = -targetRate.x }
         } else if input.stickClosed {
-            let error = HandMetrics.rotationVector(current: resetAttitude, neutral: q)
+            let error = HandMetrics.rotationVector(current: resetAttitude, neutral: state.orientation)
             targetRate = simd_clamp(error * profile.levelingGain, -profile.maxAngularRate, profile.maxAngularRate)
         }
 
         // Slew as a vector so the rotation axis never bends while rates build up; the step size
-        // respects each body axis's own limit (an ellipsoid of per-axis limits). In global mode the
-        // reference lives in world axes between frames, so a world-fixed command stays world-fixed
-        // while the ship rotates underneath it.
-        var current = frame == .global ? q.inverse.act(worldRateReference) : rateReference
-        let slowing = simd_length(targetRate) < simd_length(current) || simd_dot(targetRate, current) < 0
-        current = Self.slew(current, toward: targetRate,
-                            limits: slowing ? profile.angularDeceleration : profile.angularAcceleration, dt: dt)
-        rateReference = current
-        worldRateReference = q.act(current)
+        // respects each body axis's own limit (an ellipsoid of per-axis limits).
+        let slowing = simd_length(targetRate) < simd_length(rateReference) || simd_dot(targetRate, rateReference) < 0
+        rateReference = Self.slew(rateReference, toward: targetRate,
+                                  limits: slowing ? profile.angularDeceleration : profile.angularAcceleration, dt: dt)
 
         // Hold attitude once rotation has settled with nothing commanded, so a stick released
         // mid-turn decelerates to a stop instead of being yanked back.
@@ -120,15 +102,6 @@ public struct IntentMapper: Sendable {
             return DesiredCraftState(angularRate: rateReference, attitude: heldAttitude, assist: .velocityHold,
                                      bodyVelocity: velocityReference)
         }
-    }
-
-    /// Scales `rate` uniformly (keeping its axis) so no body component exceeds its limit.
-    static func limit(_ rate: Vec3, to max: Vec3) -> Vec3 {
-        var scale = 1.0
-        for axis in 0..<3 where abs(rate[axis]) > max[axis] {
-            scale = min(scale, max[axis] / abs(rate[axis]))
-        }
-        return rate * scale
     }
 
     /// Vector slew whose maximum step along any direction lies on the ellipsoid of per-axis

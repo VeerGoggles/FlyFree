@@ -83,7 +83,7 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
 
   | | Speed up | Slow down |
   |---|---|---|
-  | Rotation (pitch, yaw, roll) | 0.4, 0.4, 0.6 rad/s² | 1.2, 1.2, 1.8 rad/s² |
+  | Rotation (pitch, yaw, roll) | 1.2, 1.2, 1.8 rad/s² (full rate in about 0.5 s) | 2.4, 2.4, 3.6 rad/s² (stops in about 0.25 s) |
   | Translation | 4 m/s² | 12 m/s² |
 - **Quaternion navigation, with no Euler angles anywhere in the control path.**
   - Attitude is a unit quaternion. It is integrated with exact axis-angle steps and renormalized every step.
@@ -92,9 +92,7 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
   - The pedal's tilt comes from a swing-twist decomposition of the relative hand quaternion.
 
   There is therefore no gimbal lock at any attitude, and tests tumble the ship through more than 360° about oblique axes to confirm it.
-- **Stick frame (`ControlFrame`):**
-  - **`global` (default):** the hand's rotation vector is taken in the launch/world frame, the same frame as the attitude hologram. It is re-projected into the ship's *current* body frame (`ω_body = q⁻¹ · (q_launch · ω_hand)`) on every physics step, and the rate reference is stored in world axes between steps. Tipping your fingertips up therefore always rotates the ship about the same world axis your hand rotated about, whatever the ship's attitude.
-  - **`body`:** a conventional cockpit stick, where pitch is always nose-up relative to the seat.
+- **The stick commands deltas relative to the ship's current frame.** Hand deflection becomes a rotation *rate about the ship's own axes*, so a yaw gesture yaws the ship the same way whatever its attitude. A world-fixed ("global") stick was tried and rejected: it made the same gesture do different things depending on the ship's attitude.
 - **Rotation:** the target rate slews as a *vector*. The step size lies on the ellipsoid of per-axis limits, so the rotation axis never bends while rates build up.
   - Centered or released: once rotation has settled, the current attitude becomes a *target to hold*. Capturing it only after settling avoids snap-back when the stick is released mid-turn.
   - Closed stick hand: the craft returns to its reset attitude (the launch attitude), using the same limits.
@@ -105,7 +103,7 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
 ### 3.4 Control → body `Wrench` demand
 - **Rotation:** `ω* = ω_ref + clamp(K_att · log(q⁻¹ · q_target))`, then `τ = I·(α_ff + K_rate·(ω* − ω)) + ω × Iω`. Here `α_ff` is the feed-forward acceleration and the last term is gyroscopic compensation.
 - **Translation:** `F = m·(a_ff + K_v·(v_ref − v))`.
-- **Thruster sizing:** the RCS (25 kN per thruster) and retro thrusters (75 kN each) are sized so the braking limits are physically reachable.
+- **Thruster sizing:** the RCS (50 kN per thruster) and retro thrusters (75 kN each) are sized so the braking limits are physically reachable.
 - **Translation:** `F = m·K·(v* − v)` in the body frame, or a direct thrust fraction when assist is off.
 - Later: PID with integral and anti-windup, and gain scheduling for aircraft (dynamic pressure).
 
