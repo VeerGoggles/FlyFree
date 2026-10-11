@@ -11,6 +11,7 @@ Each phase ends with something you can fly. Checked items are already in the rep
 - [x] Closed hands: reset orientation (stick), brake to a stop (throttle)
 - [x] Separate rotation and translation acceleration limits; low-momentum braking with feed-forward tracking
 - [x] Gate course: flown-through states, scoring, holographic score
+- [x] Course clock, best time per device, completion screen (Retry / Land)
 - [x] Hand holograms (attitude over the stick hand, thrusters over the throttle hand); holographic hand plates
 - [x] Graphics pass: tinted stars, sun, ringed planet, nebula, space dust, PBR cockpit
 - [x] Rate-command / attitude-hold in the craft's frame

@@ -43,3 +43,16 @@ import simd
         #expect(tracker.nextGateID == 0)
     }
 }
+
+@Suite struct CourseClockTests {
+    @Test func clockRunsFromFirstMovementAndStopsAtFinish() {
+        var tracker = CourseTracker(course: Course(name: "One", gates: [Gate(id: 0, center: Vec3(0, 0, -10), radius: 5)]))
+        #expect(tracker.elapsed(at: 5) == 0)
+        _ = tracker.update(position: .zero, time: 2)
+        _ = tracker.update(position: Vec3(0, 0, -5), time: 3)
+        #expect(tracker.elapsed(at: 4) == 1)
+        _ = tracker.update(position: Vec3(0, 0, -15), time: 6)
+        #expect(tracker.isFinished)
+        #expect(tracker.elapsed(at: 100) == 3)
+    }
+}

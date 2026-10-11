@@ -56,6 +56,10 @@ final class AppModel {
     private(set) var lastGateEvent: (event: CourseTracker.Event, time: Double)?
     /// Seconds since the session started.
     private(set) var clock = 0.0
+    /// Best finish time for the current course on this device, if any.
+    private(set) var bestTime: Double?
+    /// True when the latest finish beat the previous best.
+    private(set) var isNewBest = false
 
     private var calibrationSession = CalibrationSession()
     private var calibration: HandCalibration?
@@ -85,6 +89,8 @@ final class AppModel {
         telemetry = nil
         course = CourseTracker(course: CourseCatalog.asteroidSlalom)
         lastGateEvent = nil
+        isNewBest = false
+        bestTime = UserDefaults.standard.object(forKey: bestTimeKey) as? Double
     }
 
     /// Re-captures the neutral flat-hand pose. The craft holds attitude meanwhile.
@@ -140,6 +146,18 @@ final class AppModel {
         self.telemetry = telemetry
         for event in course.update(position: telemetry.state.position, time: clock) {
             lastGateEvent = (event, clock)
+            if event.finished { recordFinish() }
+        }
+    }
+
+    private var bestTimeKey: String { "bestTime.\(course.course.name)" }
+
+    private func recordFinish() {
+        let time = course.elapsed(at: clock)
+        if bestTime.map({ time < $0 }) ?? true {
+            isNewBest = bestTime != nil
+            bestTime = time
+            UserDefaults.standard.set(time, forKey: bestTimeKey)
         }
     }
 }

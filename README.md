@@ -24,7 +24,8 @@ That 3D hand motion becomes a *desired craft state* in the craft's current frame
 | Flat-hand throttle pedal: push down to accelerate, level to hold speed, tip up to brake | |
 | Closed hands: reset orientation (stick), brake to a stop (throttle) | |
 | Separate acceleration limits for rotation and speed; braking about 3× stronger than speeding up | |
-| Gate course with flown-through states and a holographic score | |
+| Gate course with flown-through states, a holographic score and a course clock | |
+| Completion screen: time, score and best time, with Retry or Land | |
 | Quaternion navigation: stick deltas apply about the ship's current axes, identically at any attitude | |
 | Hand holograms: ship attitude over the stick hand, live thrusters over the throttle hand | |
 | Holographic hand plates; sun, ringed planet, nebula, space dust | |

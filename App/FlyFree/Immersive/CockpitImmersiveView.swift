@@ -23,6 +23,8 @@ struct CockpitImmersiveView: View {
             // Session guidance: always visible, even before the cockpit fades in.
             scene.mountInGuide(attachments.entity(for: Panel.calibration),
                                position: [0, 1.4, -0.85], yaw: 0, pitch: 0)
+            scene.mountInCockpit(attachments.entity(for: Panel.complete),
+                                 position: [0, 1.3, -0.85], yaw: 0, pitch: 0)
             scene.mountInGuide(attachments.entity(for: Panel.simulator),
                                position: [0.62, 1.05, -0.4], yaw: -0.8, pitch: -0.25)
 
@@ -35,6 +37,7 @@ struct CockpitImmersiveView: View {
             Attachment(id: Panel.dashboard) { DashboardControls().environment(model) }
             Attachment(id: Panel.calibration) { CalibrationPanel().environment(model) }
             Attachment(id: Panel.simulator) { SimulatedHandsPanel().environment(model) }
+            Attachment(id: Panel.complete) { CourseCompletePanel().environment(model) }
         }
         .onAppear { model.immersiveSpaceState = .open }
         .onDisappear {
@@ -51,6 +54,7 @@ struct CockpitImmersiveView: View {
         static let dashboard = "dashboard"
         static let calibration = "calibration"
         static let simulator = "simulator"
+        static let complete = "complete"
     }
 }
 
@@ -86,7 +90,7 @@ struct HUDView: View {
             Text(model.craft.name).font(.headline)
             if let telemetry = model.telemetry {
                 TelemetryReadout(telemetry: telemetry)
-                Text("Score \(model.course.score) · gates \(model.course.gatesPassed)/\(model.course.course.gates.count)")
+                Text("Score \(model.course.score) · gates \(model.course.gatesPassed)/\(model.course.course.gates.count) · \(ScoreHologram.format(model.course.elapsed(at: model.clock)))")
                     .font(.callout.monospacedDigit().bold())
                     .foregroundStyle(.cyan)
                 Text("Close stick hand: reset orientation · Close throttle hand: stop")
@@ -99,6 +103,58 @@ struct HUDView: View {
         .padding(20)
         .frame(width: 380)
         .glassBackgroundEffect()
+    }
+}
+
+/// Shown when the last gate is passed: time, score, best, and Retry / Land.
+struct CourseCompletePanel: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+
+    var body: some View {
+        let course = model.course
+        if course.isFinished {
+            VStack(spacing: 18) {
+                Image(systemName: "flag.checkered")
+                    .font(.system(size: 40))
+                Text("Course complete").font(.largeTitle.bold())
+                Text(course.course.name).font(.headline).foregroundStyle(.secondary)
+                Grid(horizontalSpacing: 28, verticalSpacing: 8) {
+                    GridRow {
+                        stat("Time", ScoreHologram.format(course.elapsed(at: model.clock)))
+                        stat("Score", "\(course.score)")
+                        stat("Best", model.bestTime.map(ScoreHologram.format) ?? "—")
+                    }
+                }
+                if model.isNewBest {
+                    Label("New best time!", systemImage: "trophy.fill")
+                        .font(.headline)
+                        .foregroundStyle(.yellow)
+                }
+                HStack(spacing: 20) {
+                    Button("Retry", systemImage: "arrow.counterclockwise", action: model.resetFlight)
+                    Button("Land", systemImage: "airplane.arrival") {
+                        Task {
+                            model.immersiveSpaceState = .inTransition
+                            await dismissImmersiveSpace()
+                        }
+                    }
+                    .tint(.orange)
+                }
+                .labelStyle(.titleAndIcon)
+                .controlSize(.large)
+            }
+            .padding(32)
+            .frame(width: 560)
+            .glassBackgroundEffect()
+        }
+    }
+
+    private func stat(_ label: String, _ value: String) -> some View {
+        VStack {
+            Text(value).font(.title.monospacedDigit().bold())
+            Text(label).font(.caption).foregroundStyle(.secondary)
+        }
     }
 }
 

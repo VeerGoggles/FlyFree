@@ -52,6 +52,14 @@ public struct CourseTracker: Sendable {
 
     public var gatesPassed: Int { passed.count }
 
+    public var isFinished: Bool { finishTime != nil }
+
+    /// Course time: from first movement until now, or until the last gate once finished.
+    public func elapsed(at now: Double) -> Double {
+        guard let start = startTime else { return 0 }
+        return (finishTime ?? now) - start
+    }
+
     /// Call once per frame. Returns the gates flown through since the last call.
     public mutating func update(position: Vec3, time: Double) -> [Event] {
         defer { lastPosition = position }
