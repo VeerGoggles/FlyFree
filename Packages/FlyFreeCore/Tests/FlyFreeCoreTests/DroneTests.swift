@@ -2,6 +2,7 @@ import Testing
 import simd
 @testable import FlyFreeCore
 
+/// The drone flies with the jet's controls through a position/velocity flight computer.
 @Suite struct DroneTests {
     let drone = CraftCatalog.drone
     let dt = 1.0 / 90
@@ -12,11 +13,15 @@ import simd
         return t
     }
 
-    private func hovering(at altitude: Double = 30) -> FlightPipeline {
-        var p = FlightPipeline(craft: drone, initialState: RigidBodyState(position: Vec3(0, altitude, 0)))
+    /// Takes off from the pad with the jet's gesture and levels off.
+    private func airborne() -> FlightPipeline {
+        var p = FlightPipeline(craft: drone)
+        _ = run(&p, PilotInput(rotation: Vec3(1, 0, 0), engaged: true), seconds: 5)
         _ = run(&p, PilotInput(engaged: true), seconds: 3)
         return p
     }
+
+    private func bank(_ q: Quat) -> Double { IntentMapper.bank(q) }
 
     @Test func rotorsMixLikeAQuadcopter() {
         var allocator = ControlAllocator(actuators: drone.actuators, weights: drone.allocationWeights)
@@ -31,60 +36,87 @@ import simd
         #expect(abs(c[0] - c[2]) < 0.01 && abs(c[1] - c[3]) < 0.01 && abs(c[0] - c[1]) > 0.1)
     }
 
-    @Test func sitsOnTheHelipad() {
-        var p = FlightPipeline(craft: drone)
-        let t = run(&p, .neutral, seconds: 3)
-        #expect(t.wheelsOnGround == 4)
-        #expect(simd_length(t.state.velocity) < 0.02)
+    @Test func startsInTheJetsPose() {
+        #expect(drone.startingPose == .stickAndThrottle)
     }
 
-    @Test func pedalClimbsAndLevelPedalHoldsAltitude() {
+    @Test func sitsOnThePadAndThePedalAloneDoesNotDragItAlong() {
         var p = FlightPipeline(craft: drone)
-        var t = run(&p, PilotInput(throttle: 0.9), seconds: 6)
+        let t = run(&p, PilotInput(throttle: 1, engaged: true), seconds: 3)
+        #expect(t.wheelsOnGround == 4)
+        #expect(simd_length(t.state.velocity) < 0.05)
+    }
+
+    @Test func takeOffGestureIsTheJetsPullBackPlusPedal() {
+        var p = FlightPipeline(craft: drone)
+        // Pull back: lifts straight off the pad and climbs.
+        var t = run(&p, PilotInput(rotation: Vec3(1, 0, 0), engaged: true), seconds: 3)
         #expect(!t.onGround)
         #expect(t.state.velocity.y > 4)
-        _ = run(&p, PilotInput(engaged: true), seconds: 4)
+        // Add pedal: speeds up forward while still climbing.
+        t = run(&p, PilotInput(rotation: Vec3(0.6, 0, 0), throttle: 1, engaged: true), seconds: 4)
+        #expect(-t.state.velocity.z > 8)
+        #expect(t.state.velocity.y > 0.5)
+    }
+
+    @Test func pedalSetsSpeedAndReleasedStickHoldsAltitude() {
+        var p = airborne()
+        _ = run(&p, PilotInput(throttle: 1, engaged: true), seconds: 3)      // full pedal for 3 s
         let y = p.state.position.y
-        t = run(&p, PilotInput(engaged: true), seconds: 5)
-        #expect(abs(t.state.position.y - y) < 0.5)
-        #expect(simd_length(t.state.velocity) < 0.2)
+        let t = run(&p, PilotInput(engaged: true), seconds: 6)               // level pedal: hold
+        let speed = simd_length(Vec3(t.state.velocity.x, 0, t.state.velocity.z))
+        #expect(abs(speed - 3 * drone.profile.linearAcceleration) < 1)
+        #expect(abs(t.state.position.y - y) < 1)
     }
 
-    @Test func tiltFliesForwardAtConstantAltitudeAndReleaseHovers() {
-        var p = hovering()
-        var t = run(&p, PilotInput(rotation: Vec3(-0.9, 0, 0), engaged: true), seconds: 8)
-        let expected = drone.profile.rotationShaping.apply(0.9) * drone.multirotor!.maxHorizontalSpeed
-        #expect(abs(-t.state.velocity.z - expected) < 0.5)   // forward = −Z at launch heading
-        #expect(abs(t.state.position.y - 30) < 1.5)
-        // Let go: brakes to a hover within ~4 s.
-        t = run(&p, PilotInput(engaged: true), seconds: 4)
+    @Test func rollMakesACoordinatedBankedTurnAndReleaseHoldsHeading() {
+        var p = airborne()
+        _ = run(&p, PilotInput(throttle: 1, engaged: true), seconds: 3)
+        _ = run(&p, PilotInput(engaged: true), seconds: 3)
+        let h0 = IntentMapper.heading(p.state.orientation), y0 = p.state.position.y
+        var t = run(&p, PilotInput(rotation: Vec3(0, 0, -1), engaged: true), seconds: 3)  // roll right
+        #expect(IntentMapper.heading(t.state.orientation) < h0 - 0.5)   // turned right
+        #expect(bank(t.state.orientation) > 0.2)                        // banked into the turn
+        #expect(abs(t.state.position.y - y0) < 1.5)
+        // Velocity follows the heading (no skidding): the craft flies where it points.
+        let v = simd_normalize(Vec3(t.state.velocity.x, 0, t.state.velocity.z))
+        var f = t.state.orientation.act(BodyAxis.forward); f.y = 0
+        #expect(simd_dot(v, simd_normalize(f)) > 0.95)
+        // Release: wings level, heading held.
+        _ = run(&p, PilotInput(engaged: true), seconds: 3)
+        let h1 = IntentMapper.heading(p.state.orientation)
+        t = run(&p, PilotInput(engaged: true), seconds: 3)
+        #expect(abs(IntentMapper.heading(t.state.orientation) - h1) < 0.05)
+        #expect(abs(bank(t.state.orientation)) < 0.05)
+    }
+
+    @Test func turnsInPlaceAtAHover() {
+        var p = airborne()
+        let start = p.state.position
+        let t = run(&p, PilotInput(rotation: Vec3(0, 0, 1), engaged: true), seconds: 3)
+        #expect(IntentMapper.heading(t.state.orientation) > 1.0)
+        #expect(simd_distance(t.state.position, start) < 1)
+    }
+
+    @Test func holdsPositionAgainstADisturbance() {
+        var p = airborne()
+        _ = run(&p, PilotInput(engaged: true), seconds: 2)
+        let hold = p.state.position
+        p.state.velocity += Vec3(3, -1, 2)   // a gust
+        let t = run(&p, PilotInput(engaged: true), seconds: 8)
+        #expect(simd_distance(t.state.position, hold) < 0.5)
+    }
+
+    @Test func closedThrottleHandBrakesToAHover() {
+        var p = airborne()
+        _ = run(&p, PilotInput(throttle: 1, engaged: true), seconds: 4)
+        let t = run(&p, PilotInput(engaged: true, throttleClosed: true), seconds: 6)
         #expect(simd_length(t.state.velocity) < 0.3)
-        #expect(acos(min(1, t.state.orientation.act(BodyAxis.up).y)) < 0.05)
     }
 
-    @Test func yawTurnsAndHoldsHeadingWithoutOvershoot() {
-        var p = hovering()
-        _ = run(&p, PilotInput(rotation: Vec3(0, 0.8, 0), engaged: true), seconds: 2)
-        let released = IntentMapper.heading(p.state.orientation)
-        #expect(released > 0.5)
-        let t = run(&p, PilotInput(engaged: true), seconds: 4)
-        let settled = IntentMapper.heading(t.state.orientation)
-        #expect(abs(settled - released) < 0.15)
-        #expect(abs(t.state.angularVelocity.y) < 0.02)
-    }
-
-    @Test func closedHandsHoverAndTurnBackToLaunchHeading() {
-        var p = hovering()
-        _ = run(&p, PilotInput(rotation: Vec3(-0.9, 0.7, 0), engaged: true), seconds: 4)
-        var t = run(&p, PilotInput(engaged: true, throttleClosed: true), seconds: 5)
-        #expect(simd_length(t.state.velocity) < 0.3)
-        t = run(&p, PilotInput(stickClosed: true), seconds: 6)
-        #expect(abs(IntentMapper.heading(t.state.orientation)) < 0.03)
-    }
-
-    @Test func descendsAndLands() {
-        var p = hovering(at: 12)
-        let t = run(&p, PilotInput(throttle: -0.9), seconds: 8)
+    @Test func pushingForwardDescendsAndLands() {
+        var p = airborne()
+        let t = run(&p, PilotInput(rotation: Vec3(-1, 0, 0), engaged: true), seconds: 10)
         #expect(t.wheelsOnGround == 4)
         #expect(abs(t.state.velocity.y) < 0.1)
     }

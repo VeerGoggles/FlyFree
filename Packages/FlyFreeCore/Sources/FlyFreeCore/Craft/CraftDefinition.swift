@@ -6,8 +6,9 @@ public enum WorldKind: String, Sendable {
     case city
 }
 
-/// Flight computer for multirotors: the stick flies velocity relative to the craft's heading
-/// (tilt to move, twist to yaw), the pedal flies climb rate, and letting go hovers in place.
+/// Flight computer for multirotors, flown with the jet's controls: pedal = speed, stick pitch =
+/// climb, stick roll = banked turn; position and velocity feedback steer the craft onto the
+/// commanded trajectory.
 public struct MultirotorControl: Sendable, Equatable {
     public var maxHorizontalSpeed: Double
     public var maxClimbRate: Double
@@ -15,9 +16,11 @@ public struct MultirotorControl: Sendable, Equatable {
     public var maxYawRate: Double
     /// Maximum tilt from level (rad); also caps horizontal acceleration at g·tan(tilt).
     public var maxTilt: Double
-    /// Velocity loop gain (1/s) and altitude-hold gain (1/s).
-    public var velocityGain = 1.6
-    public var altitudeGain = 1.0
+    /// Velocity loop gain (1/s) and position loop gain (1/s²).
+    public var velocityGain = 1.8
+    public var positionGain = 0.8
+    /// How far the position reference may lead the craft (m).
+    public var maxPositionError = 4.0
 
     public init(maxHorizontalSpeed: Double, maxClimbRate: Double, maxDescentRate: Double,
                 maxYawRate: Double, maxTilt: Double) {

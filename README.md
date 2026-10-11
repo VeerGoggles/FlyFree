@@ -28,7 +28,7 @@ That 3D hand motion becomes a *desired craft state* in the craft's current frame
 | Completion screen: time, score and best time; goes straight on to the next craft (or Retry) | |
 | **Atmospheric jet**: lift, drag and stall; control surfaces; landing gear; fly-by-wire; runway take-off; Valley Run gates | |
 | Flight-path marker showing where you're actually going | |
-| **Passenger drone**: quadcopter flown like a camera drone (tilt to move, twist to turn, pedal to climb, let go to hover) through the Rooftop Run gates in a procedural city | |
+| **Passenger drone**: quadcopter flown with the jet's controls (pull back to lift off, pedal for speed, bank to turn) through a position/velocity flight computer; Rooftop Run gates in a procedural city | |
 | Speedometer with a scale on every craft (linear airspeed / logarithmic space speed) | |
 | Quaternion navigation: stick deltas apply about the ship's current axes, identically at any attitude | |
 | Hand holograms: ship attitude over the stick hand, live thrusters over the throttle hand | |
@@ -92,7 +92,7 @@ Starting poses (shown for a right-handed pilot; mirrored for left-handed):
 |---|---|---|
 | Spacecraft | Flat, palm down, fingers forward | Flat, palm down, fingers forward |
 | Jet | Up: thumb up, palm facing in, as if gripping a stick | Down: flat, palm down, on the throttle |
-| Drone | Thumb up, palm facing in | Thumb up, palm facing in (like holding a controller) |
+| Drone | Same as the jet: thumb up, like gripping a stick | Same as the jet: flat, palm down |
 
 Whatever the starting pose, motions are read in your own frame: tipping the fingertips forward or down is always pitch (or the pedal), turning the wrist about vertical is always yaw, and rolling the forearm is always roll.
 

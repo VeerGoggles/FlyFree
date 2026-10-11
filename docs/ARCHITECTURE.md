@@ -198,14 +198,20 @@ The jet runs through the same pipeline, with more physics and a fly-by-wire laye
 
 - **Rotors** are `rotor` actuators. Each produces lift along body up plus a reaction torque about up; its spin direction sets the torque's sign. The allocator mixes them exactly like a quadcopter mixer, with no hand-written mixing table. For small actuator groups it starts from the exact least-squares solution, because rotor yaw torque is tiny next to lift.
 - **Physics:** `Atmosphere` (gravity and air), `BodyDrag` (bluff-body drag and rotational damping), and four landing skids.
-- **Flight computer (`IntentMapper.multirotorReference`):**
-  - stick tilt sets velocity relative to the drone's heading;
-  - stick yaw sets yaw rate, with the heading target capped about 17° ahead of the drone (no wind-up);
-  - the pedal sets climb rate, and a level pedal holds altitude;
-  - releasing the stick, or closing the throttle hand, brakes to a hover;
-  - a closed stick hand brakes and turns back to the launch heading.
+- **Flight computer (`IntentMapper.multirotorReference`), flown with the jet's controls:**
+  - pedal sets the target forward speed (level holds it);
+  - stick pitch sets climb or descent; pulling back on the pad lifts off, the same gesture as rotating the jet;
+  - stick roll makes a banked turn, with turn rate limited to g·tan(max tilt)/V like a coordinated turn;
+  - stick yaw adds a flat turn;
+  - released stick holds altitude, heading and speed; closed stick means level flight; closed throttle hand stops and hovers wherever braking ends.
 
-  The velocity reference becomes a thrust vector, limited by the maximum tilt. The target attitude is the drone's heading with the rotor disc tilted onto that vector (quaternions only), and collective thrust is set along the current up axis. The controller receives this as `DesiredCraftState.bodyForce` plus an attitude target.
+  This is not a rotor-speed mapping. The chain is:
+  1. Intent becomes a **desired trajectory**: a velocity reference, plus a position reference integrated from it that is kept within 4 m of the drone.
+  2. **Position and velocity feedback** turn the error into a commanded acceleration.
+  3. That acceleration becomes a thrust vector, limited by the maximum tilt; speed ramps stay within what tilting can deliver, so the trajectory is always flyable.
+  4. The target attitude is the drone's heading with the rotor disc tilted onto the thrust vector (quaternions only), plus collective thrust along the current up axis.
+  5. The allocator turns the resulting wrench into **four individual rotor commands**.
+- **Starting pose:** the same as the jet (stick hand up, throttle hand down).
 - **Scene:**
   - a procedural city on a 100 m street grid, with towers that get taller downtown and use shared generated window textures;
   - a park and a helipad at the origin;
