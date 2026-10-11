@@ -17,8 +17,20 @@ public struct CurlCalibration: Sendable, Equatable {
     }
 }
 
+/// What the throttle hand controls.
+public enum ThrottleHandMode: String, Sendable, Equatable {
+    /// Orientation: the hand is a pedal (fingertips down = more).
+    case pedal
+    /// Position: moving the hand up/down and forward/back from its calibrated spot commands
+    /// `PilotInput.translation` (drone-style).
+    case position
+}
+
 public struct InterpreterConfiguration: Sendable, Equatable {
     public var dominantHand: Chirality = .right
+    public var throttleHandMode: ThrottleHandMode = .pedal
+    /// Throttle-hand displacement (m) for full translation command in `.position` mode.
+    public var positionFullDeflection = 0.15
     /// Hand-plane rotation (radians) for full deflection: pitch (fingertips up/down),
     /// yaw (wrist turned left/right), roll (forearm rotation). ±90° on every axis; the
     /// profile's exponential curve gives fine control near center.
@@ -57,6 +69,8 @@ public struct PilotInputInterpreter: Sendable {
     private var stickClosed = false
     private var rotationFilters: [OneEuroFilter]
     private var throttleFilter: OneEuroFilter
+    private var translationFilters = [OneEuroFilter](repeating: OneEuroFilter(minCutoff: 3, beta: 1, derivativeCutoff: 3), count: 3)
+    private var translation = Vec3.zero
     private var throttle = 0.0
     private var throttleClosed = false
     private var lastThrottleSeen: Double?
@@ -116,7 +130,22 @@ public struct PilotInputInterpreter: Sendable {
 
             if throttleClosed {
                 throttle = 0
+                translation = .zero
                 throttleFilter.reset()
+                for i in translationFilters.indices { translationFilters[i].reset() }
+            } else if c.throttleHandMode == .position {
+                // Where the hand is, relative to where it was calibrated, in the pilot's frame:
+                // up/down → vertical, forward/back → fore/aft (−Z forward).
+                throttle = 0
+                if let home = calibration?.position(c.dominantHand.opposite) {
+                    let offset = plane.centroid - home
+                    var t = Vec3.zero
+                    for axis in [1, 2] {
+                        let normalized = (offset[axis] / c.positionFullDeflection).clamped(to: -1...1)
+                        t[axis] = translationFilters[axis].filter(normalized, at: time)
+                    }
+                    translation = t
+                }
             } else {
                 // Fingertips down (negative pitch) = accelerate, like pressing a pedal.
                 // Fingertips down/up in the pilot's frame, whatever pose the hand started in.
@@ -129,11 +158,13 @@ public struct PilotInputInterpreter: Sendable {
             input.throttleHandTracked = offHand != nil
             if let seen = lastThrottleSeen, time - seen > c.trackingLossGrace {
                 throttle = 0
+                translation = .zero
                 throttleClosed = false
                 throttleFilter.reset()
             }
         }
         input.throttle = throttle
+        input.translation = translation
         input.throttleClosed = throttleClosed
         return input
     }

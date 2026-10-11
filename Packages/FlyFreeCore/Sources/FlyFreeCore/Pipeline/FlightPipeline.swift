@@ -58,7 +58,9 @@ public struct FlightPipeline: Sendable {
     ) {
         let start = initialState ?? craft.startState
         self.craft = craft
-        self.interpreter = PilotInputInterpreter(configuration: interpreter, calibration: calibration)
+        var configuration = interpreter
+        configuration.throttleHandMode = craft.throttleHand
+        self.interpreter = PilotInputInterpreter(configuration: configuration, calibration: calibration)
         self.mapper = IntentMapper(profile: craft.profile, assist: assist, resetAttitude: start.orientation)
         self.mapper.aircraft = craft.aircraft
         self.mapper.multirotor = craft.multirotor

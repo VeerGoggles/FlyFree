@@ -281,13 +281,20 @@ struct SimulatedHandsPanel: View {
                 SimSlider(label: "Pitch", value: $model.simulatedHands.pitch, range: -30...30)
                 SimSlider(label: "Yaw", value: $model.simulatedHands.yaw, range: -30...30)
                 SimSlider(label: "Roll", value: $model.simulatedHands.roll, range: -40...40)
-                SimSlider(label: "Pedal", value: $model.simulatedHands.pedal, range: -30...30)
+                if model.craft.throttleHand == .position {
+                    SimSlider(label: "Hand up", value: $model.simulatedHands.handUp, range: -15...15, unit: "cm")
+                    SimSlider(label: "Hand fwd", value: $model.simulatedHands.handForward, range: -15...15, unit: "cm")
+                } else {
+                    SimSlider(label: "Pedal", value: $model.simulatedHands.pedal, range: -30...30)
+                }
                 Toggle("Throttle hand closed (stop)", isOn: $model.simulatedHands.throttleClosed)
                 Button("Center") {
                     model.simulatedHands.pitch = 0
                     model.simulatedHands.yaw = 0
                     model.simulatedHands.roll = 0
                     model.simulatedHands.pedal = 0
+                    model.simulatedHands.handUp = 0
+                    model.simulatedHands.handForward = 0
                 }
             }
             .padding(20)
@@ -301,12 +308,13 @@ private struct SimSlider: View {
     var label: String
     @Binding var value: Double
     var range: ClosedRange<Double>
+    var unit = "°"
 
     var body: some View {
         HStack {
             Text(label).frame(width: 70, alignment: .leading)
             Slider(value: $value, in: range)
-            Text("\(Int(value))°").monospacedDigit().frame(width: 44, alignment: .trailing)
+            Text("\(Int(value))\(unit)").monospacedDigit().frame(width: 52, alignment: .trailing)
         }
     }
 }

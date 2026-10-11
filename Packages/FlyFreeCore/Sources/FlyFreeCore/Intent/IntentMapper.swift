@@ -35,7 +35,6 @@ public struct IntentMapper: Sendable {
     private var droneHeading: Double?
     private var droneVelocity = Vec3.zero  // world-frame velocity reference
     private var dronePosition: Vec3?       // world-frame position reference
-    private var droneSpeed = 0.0           // forward-speed target (pedal)
     /// Height of the craft's centre above the ground when sitting on it (multirotor take-off check).
     public var groundClearance = 0.0
 
@@ -220,19 +219,20 @@ public struct IntentMapper: Sendable {
 
     // MARK: - Multirotor
 
-    /// Multirotor intent, flown with **the same controls as the jet**:
-    /// - pedal → target forward speed (down = faster, level = hold, up = slower);
-    /// - stick pitch → climb / descend (pull back on the pad to lift off — the jet's rotation);
-    /// - stick roll → banked turn, capped like a coordinated turn at g·tan(max tilt)/V;
-    /// - stick yaw → flat turn;
-    /// - released stick → hold altitude, heading and speed; closed stick → level flight;
-    /// - closed throttle hand → brake to a hover.
+    /// Multirotor intent, drone-style:
+    /// - **throttle hand position**: raise/lower → climb/descend; push forward/pull back → fly
+    ///   forward/back. The two add together (up-and-forward climbs while moving forward);
+    /// - **stick hand**: twist → turn, roll → slide sideways, tip forward/back → forward/back
+    ///   (added to the throttle hand's push);
+    /// - released → hold position; closed throttle hand → stop and hover; closed stick → hover
+    ///   and turn back to the launch heading.
     ///
-    /// This is not a rotor-speed mapping. The intent becomes a **desired trajectory** — a velocity
-    /// reference plus a position reference integrated from it — and the craft is steered onto it
-    /// with position and velocity feedback. The resulting acceleration becomes a thrust vector; the
-    /// craft tilts its rotor disc onto that vector (quaternions only) and sets collective thrust,
-    /// and the allocator turns that wrench into the four individual rotor commands.
+    /// Every command becomes one velocity vector in the craft's heading frame. That vector drives a
+    /// **desired trajectory** (velocity reference + position reference), position and velocity
+    /// feedback turn the tracking error into an acceleration, the acceleration becomes a single
+    /// thrust vector — climbing adds collective, moving tilts it, both at once — and the craft tilts
+    /// its rotor disc onto that vector. The allocator then splits the wrench into individual rotor
+    /// commands, so the functions combine additively on the rotors.
     private mutating func multirotorReference(_ input: PilotInput, state: RigidBodyState,
                                               onGround: Bool, dt: Double) -> DesiredCraftState {
         guard let mr = multirotor else { return reference(input, state: state, dt: dt) }
@@ -240,39 +240,29 @@ public struct IntentMapper: Sendable {
         let q = state.orientation
         var heading = droneHeading ?? Self.heading(q)
 
-        // --- Intent → trajectory (speed, climb, turn) -------------------------------------
-        let shaped = input.engaged
+        // --- Intent → velocity in the heading frame ----------------------------------------
+        let stick = input.engaged
             ? Vec3(profile.rotationShaping.apply(input.rotation.x),
                    profile.rotationShaping.apply(input.rotation.y),
                    profile.rotationShaping.apply(input.rotation.z))
             : .zero
+        let hand = Vec3(0, profile.throttleShaping.apply(input.translation.y),
+                        profile.throttleShaping.apply(input.translation.z))
 
-        // Speed: the pedal moves the forward-speed target, like the jet's autothrottle.
-        let pedal = profile.throttleShaping.apply(input.throttle)
-        var speed = droneSpeed
-        if input.throttleClosed {
-            speed = max(0, speed - profile.linearDeceleration * dt)
-        } else {
-            speed += pedal * (pedal >= 0 ? profile.linearAcceleration : profile.linearDeceleration) * dt
+        // Forward: throttle hand pushed forward (−Z) plus stick tipped forward (fingertips down).
+        var forward = ((-hand.z) + (-stick.x)).clamped(to: -1...1) * mr.maxHorizontalSpeed
+        var lateral = -stick.z * mr.maxHorizontalSpeed
+        var climb = hand.y >= 0 ? hand.y * mr.maxClimbRate : hand.y * mr.maxDescentRate
+        var turn = stick.y * mr.maxYawRate
+        if input.stickClosed {
+            forward = 0; lateral = 0
+            turn = (remainder(Self.heading(resetAttitude) - heading, 2 * .pi) * 1.5).clamped(to: -mr.maxYawRate...mr.maxYawRate)
         }
-        speed = speed.clamped(to: 0...mr.maxHorizontalSpeed)
+        if input.throttleClosed { forward = 0; lateral = 0; climb = 0 }
 
-        // Climb: stick pitch. Descending onto the ground just settles the craft.
-        var climb = shaped.x >= 0 ? shaped.x * mr.maxClimbRate : shaped.x * mr.maxDescentRate
-        if input.throttleClosed { climb = 0 }
-
-        // Turn: roll banks into a coordinated turn (limited by how far the craft can tilt at
-        // this speed); yaw adds a flat turn.
-        let coordinatedLimit = g * tan(mr.maxTilt) / max(speed, 1)
-        let turnLimit = min(mr.maxYawRate, coordinatedLimit + (speed < 3 ? mr.maxYawRate : 0))
-        var turn = shaped.z * turnLimit + shaped.y * mr.maxYawRate
-        if input.stickClosed { turn = 0; climb = 0 }
-        turn = turn.clamped(to: -mr.maxYawRate...mr.maxYawRate)
-
-        // On the pad the craft can't roll forward: speed only builds once it has lifted off.
+        // On the pad the craft can't slide: horizontal motion only once it has lifted off.
         let airborne = !onGround && state.position.y > groundClearance + 1.0
-        if !airborne { speed = 0 }
-        droneSpeed = speed
+        if !airborne { forward = 0; lateral = 0 }
 
         // Smooth the turn rate and keep the heading target close to the craft (no wind-up).
         let slowingTurn = abs(turn) < abs(rateReference.y) || turn * rateReference.y < 0
@@ -284,8 +274,8 @@ public struct IntentMapper: Sendable {
         droneHeading = heading
 
         // --- Trajectory → desired velocity and position --------------------------------------
-        let forward = Vec3(-sin(heading), 0, -cos(heading))
-        let targetVelocity = forward * speed + Vec3(0, climb, 0)
+        let ahead = Vec3(-sin(heading), 0, -cos(heading)), right = Vec3(cos(heading), 0, -sin(heading))
+        let targetVelocity = ahead * forward + right * lateral + Vec3(0, climb, 0)
         let previous = droneVelocity
         droneVelocity = Self.slew(droneVelocity, toward: targetVelocity,
                                   step: (simd_length(targetVelocity) > simd_length(droneVelocity)
@@ -298,7 +288,7 @@ public struct IntentMapper: Sendable {
         var target = (dronePosition ?? state.position) + droneVelocity * dt
         if !airborne && climb <= 0 { target = state.position }
         // Braking (closed throttle hand) means "stop wherever the stop ends": the position
-        // reference follows the craft until the speed target reaches zero, then locks.
+        // reference follows the craft until the velocity reference reaches zero, then locks.
         if input.throttleClosed, simd_length(droneVelocity) > 0.05 { target = state.position + droneVelocity * dt }
         let error = target - state.position
         if simd_length(error) > mr.maxPositionError {

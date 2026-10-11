@@ -102,6 +102,8 @@ public struct CraftDefinition: Sendable, Identifiable {
     public var speedGauge: GaugeScale
     /// Hand poses the pilot starts (and calibrates) in.
     public var startingPose: StartingPose
+    /// What the throttle hand controls for this craft.
+    public var throttleHand: ThrottleHandMode
 
     public init(
         id: String, name: String, summary: String,
@@ -119,7 +121,8 @@ public struct CraftDefinition: Sendable, Identifiable {
         startState: RigidBodyState = .init(),
         course: Course = CourseCatalog.asteroidSlalom,
         speedGauge: GaugeScale = .spacecraft,
-        startingPose: StartingPose = .bothFlat
+        startingPose: StartingPose = .bothFlat,
+        throttleHand: ThrottleHandMode = .pedal
     ) {
         self.id = id
         self.name = name
@@ -142,6 +145,7 @@ public struct CraftDefinition: Sendable, Identifiable {
         self.course = course
         self.speedGauge = speedGauge
         self.startingPose = startingPose
+        self.throttleHand = throttleHand
     }
 
     /// The physics environment this craft is designed for.

@@ -54,7 +54,7 @@ struct HangarView: View {
                     Hold both hands out flat, palms down, until they lock in — the cockpit fades in around you.
                     Stick hand: tip fingertips up/down to pitch, turn the wrist left/right to yaw, rotate the forearm to roll. Close it to return to the starting orientation.
                     Throttle hand is a pedal: push fingertips down to accelerate, level to hold speed, tip up to brake. Close it to brake to a stop.
-                    Drone: flies like the jet — pull back to lift off, pedal for speed, bank to turn; close the throttle hand to stop and hover.
+                    Drone: hold your throttle hand thumb-up and move it — up/down to climb or descend, forward/back to fly forward or back (they combine). Stick hand: twist to turn, roll to slide sideways, tip to add forward/back. Let go to hold position.
                     Jet: the pedal sets the autothrottle's airspeed. Let go of the stick to hold your climb and bank; close it for wings-level, level flight. Rotate at about 90 m/s to take off.
                     """)
                 }

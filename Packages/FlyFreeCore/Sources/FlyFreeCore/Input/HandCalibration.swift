@@ -1,18 +1,27 @@
 import simd
 
-/// The neutral ("stick centered") orientation of each hand's plane, captured while the pilot
-/// holds both hands out flat. All control is measured relative to this frame.
+/// The neutral ("stick centered") orientation — and position — of each hand's plane, captured
+/// while the pilot holds the starting pose. All control is measured relative to it.
 public struct HandCalibration: Sendable, Equatable {
     public var left: Quat
     public var right: Quat
+    /// Neutral hand-plane centres (world, m), for controls driven by where a hand is.
+    public var leftPosition: Vec3?
+    public var rightPosition: Vec3?
 
-    public init(left: Quat, right: Quat) {
+    public init(left: Quat, right: Quat, leftPosition: Vec3? = nil, rightPosition: Vec3? = nil) {
         self.left = left
         self.right = right
+        self.leftPosition = leftPosition
+        self.rightPosition = rightPosition
     }
 
     public subscript(_ chirality: Chirality) -> Quat {
         chirality == .left ? left : right
+    }
+
+    public func position(_ chirality: Chirality) -> Vec3? {
+        chirality == .left ? leftPosition : rightPosition
     }
 
     /// Both hands palm-down, fingers pointing -Z.
@@ -63,6 +72,8 @@ public struct CalibrationSession: Sendable {
 
     private var holdStart: Double?
     private var sums: [Chirality: SIMD4<Double>] = [:]
+    private var positionSums: [Chirality: Vec3] = [:]
+    private var samples = 0
     private var previous: [Chirality: (Quat, Double)] = [:]
     private var result: HandCalibration?
 
@@ -77,6 +88,8 @@ public struct CalibrationSession: Sendable {
     public mutating func reset() {
         holdStart = nil
         sums = [:]
+        positionSums = [:]
+        samples = 0
         previous = [:]
         result = nil
     }
@@ -93,6 +106,8 @@ public struct CalibrationSession: Sendable {
         guard l == .ready, r == .ready, let leftPlane, let rightPlane else {
             holdStart = nil
             sums = [:]
+        positionSums = [:]
+        samples = 0
             return CalibrationProgress(left: l, right: r, fraction: 0)
         }
 
@@ -100,10 +115,16 @@ public struct CalibrationSession: Sendable {
         holdStart = start
         accumulate(.left, leftPlane.orientation)
         accumulate(.right, rightPlane.orientation)
+        positionSums[.left, default: .zero] += leftPlane.centroid
+        positionSums[.right, default: .zero] += rightPlane.centroid
+        samples += 1
 
         let fraction = ((time - start) / requirements.holdDuration).clamped(to: 0...1)
         if fraction >= 1, let ls = sums[.left], let rs = sums[.right] {
-            result = HandCalibration(left: Quat(vector: simd_normalize(ls)), right: Quat(vector: simd_normalize(rs)))
+            let n = Double(max(samples, 1))
+            result = HandCalibration(left: Quat(vector: simd_normalize(ls)), right: Quat(vector: simd_normalize(rs)),
+                                     leftPosition: positionSums[.left].map { $0 / n },
+                                     rightPosition: positionSums[.right].map { $0 / n })
         }
         return CalibrationProgress(left: l, right: r, fraction: fraction, result: result)
     }

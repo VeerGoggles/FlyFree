@@ -198,20 +198,20 @@ The jet runs through the same pipeline, with more physics and a fly-by-wire laye
 
 - **Rotors** are `rotor` actuators. Each produces lift along body up plus a reaction torque about up; its spin direction sets the torque's sign. The allocator mixes them exactly like a quadcopter mixer, with no hand-written mixing table. For small actuator groups it starts from the exact least-squares solution, because rotor yaw torque is tiny next to lift.
 - **Physics:** `Atmosphere` (gravity and air), `BodyDrag` (bluff-body drag and rotational damping), and four landing skids.
-- **Flight computer (`IntentMapper.multirotorReference`), flown with the jet's controls:**
-  - pedal sets the target forward speed (level holds it);
-  - stick pitch sets climb or descent; pulling back on the pad lifts off, the same gesture as rotating the jet;
-  - stick roll makes a banked turn, with turn rate limited to g·tan(max tilt)/V like a coordinated turn;
-  - stick yaw adds a flat turn;
-  - released stick holds altitude, heading and speed; closed stick means level flight; closed throttle hand stops and hovers wherever braking ends.
+- **Throttle hand drives by position (`ThrottleHandMode.position`).** Calibration records each hand's neutral *position* as well as its orientation. The throttle hand's offset from that spot, in the pilot's frame and scaled so ±15 cm is full command, becomes `PilotInput.translation`:
+  - up/down → climb/descend;
+  - forward/back → fly forward/back.
+- **Flight computer (`IntentMapper.multirotorReference`), drone-style:**
+  - Throttle-hand height sets climb; its fore/aft offset, plus the stick tipped forward or back, sets fore/aft speed. Stick roll slides sideways; stick twist turns.
+  - All of these add into **one velocity vector** in the drone's heading frame. Climbing and moving together therefore produce one thrust vector that is both larger than hover thrust and tilted: the two functions combine additively on the rotors.
+  - Releasing holds position. A closed throttle hand stops and hovers wherever braking ends. A closed stick hand hovers and turns back to the launch heading.
 
-  This is not a rotor-speed mapping. The chain is:
-  1. Intent becomes a **desired trajectory**: a velocity reference, plus a position reference integrated from it that is kept within 4 m of the drone.
-  2. **Position and velocity feedback** turn the error into a commanded acceleration.
-  3. That acceleration becomes a thrust vector, limited by the maximum tilt; speed ramps stay within what tilting can deliver, so the trajectory is always flyable.
-  4. The target attitude is the drone's heading with the rotor disc tilted onto the thrust vector (quaternions only), plus collective thrust along the current up axis.
-  5. The allocator turns the resulting wrench into **four individual rotor commands**.
-- **Starting pose:** the same as the jet (stick hand up, throttle hand down).
+  The chain from there:
+  1. **Desired trajectory:** a velocity reference, plus a position reference integrated from it and kept within 4 m of the drone.
+  2. **Position and velocity feedback** turn the tracking error into a commanded acceleration, limited by the maximum tilt. Speed ramps stay within what tilting can deliver, so the trajectory is always flyable.
+  3. The acceleration becomes a **thrust vector**, which becomes the target attitude (heading, with the rotor disc tilted onto the vector) plus collective thrust.
+  4. The allocator turns that into **individual rotor commands**.
+- **Starting pose:** both hands vertical with thumbs up (`controllerGrip`).
 - **Scene:**
   - a procedural city on a 100 m street grid, with towers that get taller downtown and use shared generated window textures;
   - a park and a helipad at the origin;
