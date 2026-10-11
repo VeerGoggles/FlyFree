@@ -166,7 +166,11 @@ public struct IntentMapper: Sendable {
             flightPathHold = nil
         } else {
             if flightPathHold == nil, simd_length(state.angularVelocity - coordination) < settleRate * 5 {
-                let gamma = flying ? asin((state.velocity.y / max(airspeed, 1)).clamped(to: -1...1)) : 0
+                // Airborne: hold the flight path. On the ground: hold the current pitch, so a pilot
+                // can rotate and let go.
+                let gamma = flying
+                    ? asin((state.velocity.y / max(airspeed, 1)).clamped(to: -1...1))
+                    : asin(q.act(BodyAxis.forward).y.clamped(to: -1...1))
                 var bank = Self.bank(q)
                 if abs(bank) < 0.05 { bank = 0 }  // snap near-level to wings level
                 flightPathHold = (gamma, bank)

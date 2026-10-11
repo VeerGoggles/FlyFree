@@ -42,12 +42,14 @@ final class CockpitScene {
     private let attitude = AttitudeHologram()
     private let thrusters: ThrusterHologram
     private let score = ScoreHologram()
+    private let speedometer: SpeedGauge
 
     /// The point the universe pivots around — roughly a seated pilot's head.
     private let pivot = SIMD3<Float>(0, 1.2, 0)
 
     init(craft: CraftDefinition, course: Course) {
         thrusters = ThrusterHologram(craft: craft)
+        speedometer = SpeedGauge(scale: craft.speedGauge)
         root.addChild(flight)
         root.addChild(guide)
         flight.components.set(OpacityComponent(opacity: 0))
@@ -75,6 +77,10 @@ final class CockpitScene {
         // Upper right of the windscreen, angled toward the pilot, clear of the flight path.
         score.entity.position = [0.48, 1.58, -1.05]
         score.entity.orientation = simd_quatf(angle: -0.4, axis: [0, 1, 0])
+        // Speedometer on the console, right of centre, angled up toward the pilot.
+        speedometer.entity.position = [0.3, 0.99, -0.6]
+        speedometer.entity.orientation = simd_quatf(angle: -0.3, axis: [0, 1, 0]) * simd_quatf(angle: -0.45, axis: [1, 0, 0])
+        cockpit.addChild(speedometer.entity)
         cockpit.addChild(score.entity)
     }
 
@@ -103,6 +109,7 @@ final class CockpitScene {
         guard let telemetry = model.telemetry else { return }
 
         let s = telemetry.state
+        speedometer.update(speed: telemetry.air?.airspeed ?? telemetry.speed)
         let q = s.orientation
         let inverse = simd_quatf(ix: Float(-q.imag.x), iy: Float(-q.imag.y), iz: Float(-q.imag.z), r: Float(q.real))
         let position = SIMD3<Float>(Float(s.position.x), Float(s.position.y), Float(s.position.z))

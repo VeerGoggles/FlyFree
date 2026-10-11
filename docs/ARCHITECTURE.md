@@ -68,7 +68,12 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
   - `r.y`: horizontal wrist rotation → **yaw**
   - `r.z`: forearm rotation → **roll**
 
-  Each component is divided by its full deflection (0.45, 0.5 and 0.7 rad). Because the rotation is modelled as one 3D rotation rather than three independently measured angles, combined motions stay consistent.
+  Each component is divided by its full deflection, ±90° (π/2) on every axis. The profile then applies an **exponential response**, `(e^(k·n) − 1)/(e^k − 1)` with k = 2.5:
+  - 10° of hand rotation gives under 4% of full rate;
+  - 45° gives about 22%;
+  - full rate needs the full 90°.
+
+  This gives very fine control near center. Because the rotation is modelled as one 3D rotation rather than three independently measured angles, combined motions stay consistent.
 - **Stick hand states:**
   - flat (curl ≤ 0.3): flying, with authority ramping in over about 60 ms so there is no jolt;
   - closed (curl ≥ 0.5): *reset orientation*;
@@ -124,6 +129,10 @@ Closing a hand is a reset gesture. A closed stick hand returns the craft to its 
   - a *sky* layer that only rotates (stars and the sun at infinity),
   - a *world* layer that rotates and translates (asteroids and gates, for a sense of speed).
 - **Dashboard:** Recenter, Reset and Land, mounted on the main console.
+- **Speedometer:** a round dial on the console, scaled per craft by `GaugeScale` (in the `Instruments/` folder of the core).
+  - Jet: linear 0–350 m/s airspeed, with a tick every 10 m/s and a labelled tick every 50 m/s.
+  - Spacecraft: logarithmic, 0 to 10 m/s linear and then one segment per decade up to 100 km/s.
+  - Both have a red line at the top end, a needle and a digital readout.
 - **Hand plates:** holographic rings on each fitted hand plane (rim, halo, compass ticks, forward chevron). Colour shows state: amber means waiting, cyan means flying, violet means resetting, red means braking.
 - **Hand holograms**, which follow each hand:
   - over the stick hand, a miniature ship at its true attitude relative to launch, with a level reference ring and a rotation-rate vector;

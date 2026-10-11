@@ -19,8 +19,9 @@ public struct CurlCalibration: Sendable, Equatable {
 public struct InterpreterConfiguration: Sendable, Equatable {
     public var dominantHand: Chirality = .right
     /// Hand-plane rotation (radians) for full deflection: pitch (fingertips up/down),
-    /// yaw (wrist turned left/right), roll (forearm rotation).
-    public var fullDeflection = Vec3(0.45, 0.5, 0.7)
+    /// yaw (wrist turned left/right), roll (forearm rotation). ±90° on every axis; the
+    /// profile's exponential curve gives fine control near center.
+    public var fullDeflection = Vec3(repeating: .pi / 2)
     /// Throttle-hand fingertip tilt (radians) for full pedal.
     public var throttleFullDeflection = 0.45
     /// Curl at or below which a hand counts as flat; at or above which it counts as closed.

@@ -55,7 +55,7 @@ import simd
         var pipeline = FlightPipeline(craft: craft, calibration: .identity)
         let left = SyntheticHand.make(chirality: .left, position: Vec3(-0.2, 1, -0.35))
         // Forearm rotated thumb-up → roll right (negative Z).
-        let right = SyntheticHand.make(chirality: .right, orientation: Quat(angle: -0.5, axis: Vec3(0, 0, 1)), position: Vec3(0.2, 1, -0.35))
+        let right = SyntheticHand.make(chirality: .right, orientation: Quat(angle: -1.2, axis: Vec3(0, 0, 1)), position: Vec3(0.2, 1, -0.35))
         var telemetry = pipeline.step(left: left, right: right, dt: 1 / 90)
         for _ in 0..<90 { telemetry = pipeline.step(left: left, right: right, dt: 1 / 90) }
         #expect(telemetry.input.engaged)

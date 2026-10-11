@@ -28,6 +28,7 @@ That 3D hand motion becomes a *desired craft state* in the craft's current frame
 | Completion screen: time, score and best time, with Retry or Land | |
 | **Atmospheric jet**: lift, drag and stall; control surfaces; landing gear; fly-by-wire; runway take-off; Valley Run gates | |
 | Flight-path marker showing where you're actually going | |
+| Speedometer with a scale on every craft (linear airspeed / logarithmic space speed) | |
 | Quaternion navigation: stick deltas apply about the ship's current axes, identically at any attitude | |
 | Hand holograms: ship attitude over the stick hand, live thrusters over the throttle hand | |
 | Holographic hand plates; sun, ringed planet, nebula, space dust | |
@@ -75,7 +76,7 @@ cd Packages/FlyFreeCore && swift test
 | Hand | Motion | Effect |
 |---|---|---|
 | Both | Hold out flat, palms down, and keep still for 1.5 s | Calibrate the neutral pose; the cockpit fades in |
-| Stick | Tip fingertips up or down (the plane's front-to-back angle) | Pitch |
+| Stick | Tip fingertips up or down (the plane's front-to-back angle) | Pitch (exponential response: fine near center, full rate at 90°) |
 | Stick | Turn the wrist horizontally | Yaw |
 | Stick | Rotate the forearm | Roll |
 | Stick | Close the hand | Return to the starting orientation |

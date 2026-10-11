@@ -1,19 +1,30 @@
-/// Deadzone + expo shaping for one normalized axis.
+import Foundation
+
+/// Deadzone + response curve for one normalized axis.
 public struct AxisShaping: Sendable, Equatable {
     public var deadzone: Double
-    /// 0 = linear, 1 = fully cubic (fine control near center).
+    /// Cubic blend: 0 = linear, 1 = fully cubic. Ignored when `exponential` > 0.
     public var expo: Double
+    /// Exponential curve steepness k: response = (e^(k·n) − 1) / (e^k − 1). Very fine control
+    /// near center, reaching full value only at full deflection. 0 = use the cubic blend.
+    public var exponential: Double
 
-    public init(deadzone: Double = 0.06, expo: Double = 0.35) {
+    public init(deadzone: Double = 0.06, expo: Double = 0.35, exponential: Double = 0) {
         self.deadzone = deadzone
         self.expo = expo
+        self.exponential = exponential
     }
+
+    /// Stick default: exponential, full value only at ±90° of hand rotation.
+    public static let stick = AxisShaping(deadzone: 0.02, expo: 0, exponential: 2.5)
 
     public func apply(_ x: Double) -> Double {
         let magnitude = abs(x)
         guard magnitude > deadzone else { return 0 }
         let n = ((magnitude - deadzone) / (1 - deadzone)).clamped(to: 0...1)
-        let shaped = (1 - expo) * n + expo * n * n * n
+        let shaped = exponential > 0
+            ? (exp(exponential * n) - 1) / (exp(exponential) - 1)
+            : (1 - expo) * n + expo * n * n * n
         return x < 0 ? -shaped : shaped
     }
 }
@@ -49,7 +60,7 @@ public struct ControlProfile: Sendable, Equatable {
         linearAcceleration: Double,
         linearDeceleration: Double,
         levelingGain: Double = 1.0,
-        rotationShaping: AxisShaping = .init(),
+        rotationShaping: AxisShaping = .stick,
         throttleShaping: AxisShaping = .init(deadzone: 0.06, expo: 0.2),
         maxForwardSpeed: Double,
         maxStrafeSpeed: Double,

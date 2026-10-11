@@ -14,12 +14,15 @@ private func hand(_ c: Chirality, yaw: Double = 0, pitch: Double = 0, roll: Doub
         var interpreter = PilotInputInterpreter(calibration: .identity)
         var input = PilotInput()
         for i in 0..<90 {
-            input = interpreter.update(left: hand(.left), right: hand(.right, yaw: -0.25, pitch: 0.2), time: Double(i) / 90)
+            input = interpreter.update(left: hand(.left), right: hand(.right, pitch: .pi / 4), time: Double(i) / 90)
         }
         #expect(input.engaged)
-        #expect(input.rotation.x > 0.35)   // fingertips up → pitch up
-        #expect(input.rotation.y < -0.35)  // wrist turned right → yaw right
-        #expect(abs(input.rotation.z) < 0.15)
+        #expect(abs(input.rotation.x - 0.5) < 0.02)   // fingertips up 45° → half deflection
+        for i in 90..<180 {
+            input = interpreter.update(left: hand(.left), right: hand(.right, yaw: -.pi / 2), time: Double(i) / 90)
+        }
+        #expect(input.rotation.y < -0.97)             // wrist turned right 90° → full yaw right
+        #expect(abs(input.rotation.x) < 0.02)
 
         input = interpreter.update(left: hand(.left), right: hand(.right, curl: fist), time: 1.1)
         #expect(!input.engaged)

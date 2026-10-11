@@ -54,7 +54,8 @@ extension CraftCatalog {
             landingGear: gear,
             aircraft: AircraftControl(alphaLimit: 0.24, maxAirspeed: 300),
             startState: RigidBodyState(position: Vec3(0, gearHeight - 0.12, 0)),
-            course: CourseCatalog.valleyRun
+            course: CourseCatalog.valleyRun,
+            speedGauge: .jetAirspeed
         )
     }()
 }

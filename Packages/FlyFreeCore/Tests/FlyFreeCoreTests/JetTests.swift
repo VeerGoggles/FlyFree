@@ -40,7 +40,7 @@ import simd
     @Test func takesOffAndClimbs() {
         var p = FlightPipeline(craft: jet)
         _ = run(&p, PilotInput(throttle: 1), seconds: 16)            // take-off roll
-        _ = run(&p, PilotInput(rotation: Vec3(0.6, 0, 0), engaged: true), seconds: 3)  // rotate
+        _ = run(&p, PilotInput(rotation: Vec3(0.9, 0, 0), engaged: true), seconds: 3)  // rotate
         let t = run(&p, PilotInput(engaged: true), seconds: 10)       // release: hold the climb
         #expect(!t.onGround)
         #expect(t.state.position.y > 80)
@@ -60,7 +60,7 @@ import simd
     @Test func releasedBankMakesACoordinatedLevelTurn() {
         var p = airborne()
         _ = run(&p, PilotInput(engaged: true), seconds: 3)
-        _ = run(&p, PilotInput(rotation: Vec3(0, 0, -0.35), engaged: true), seconds: 0.9)  // roll right
+        _ = run(&p, PilotInput(rotation: Vec3(0, 0, -0.6), engaged: true), seconds: 0.6)  // roll right
         _ = run(&p, PilotInput(engaged: true), seconds: 3)
         let bank = UnitTestBank.of(p.state.orientation)
         #expect(bank > 0.3 && bank < 0.7)

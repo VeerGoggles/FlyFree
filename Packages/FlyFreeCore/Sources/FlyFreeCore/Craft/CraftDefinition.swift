@@ -51,6 +51,8 @@ public struct CraftDefinition: Sendable, Identifiable {
     public var aircraft: AircraftControl?
     public var startState: RigidBodyState
     public var course: Course
+    /// Speedometer dial for this craft.
+    public var speedGauge: GaugeScale
 
     public init(
         id: String, name: String, summary: String,
@@ -63,7 +65,8 @@ public struct CraftDefinition: Sendable, Identifiable {
         landingGear: LandingGear? = nil,
         aircraft: AircraftControl? = nil,
         startState: RigidBodyState = .init(),
-        course: Course = CourseCatalog.asteroidSlalom
+        course: Course = CourseCatalog.asteroidSlalom,
+        speedGauge: GaugeScale = .spacecraft
     ) {
         self.id = id
         self.name = name
@@ -81,6 +84,7 @@ public struct CraftDefinition: Sendable, Identifiable {
         self.aircraft = aircraft
         self.startState = startState
         self.course = course
+        self.speedGauge = speedGauge
     }
 
     /// The physics environment this craft is designed for.
