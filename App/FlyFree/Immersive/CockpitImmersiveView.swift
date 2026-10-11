@@ -5,9 +5,51 @@ import SwiftUI
 /// The immersive flight session. The pilot sits still in a cockpit while the universe moves
 /// around them (visionOS cannot move the camera, so the world moves by the inverse of the
 /// craft's pose). All session controls live in the scene: the hangar window is closed.
+///
+/// This view owns the space's lifecycle; the scene itself (`CockpitRealityView`) is rebuilt
+/// whenever `sceneID` changes, so one simulation can follow another without leaving the space.
 struct CockpitImmersiveView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+
+    var body: some View {
+        CockpitRealityView()
+            .id(model.sceneID)
+            .onAppear { model.immersiveSpaceState = .open }
+            .task {
+                // Development aid: `-FlyFreeAutoLandAfter <seconds>` lands automatically.
+                let seconds = UserDefaults.standard.double(forKey: "FlyFreeAutoLandAfter")
+                guard seconds > 0 else { return }
+                try? await Task.sleep(for: .seconds(seconds))
+                await Landing.land(model: model, openWindow: openWindow, dismiss: dismissImmersiveSpace)
+            }
+            .onDisappear {
+                model.handTracking.stop()
+                model.immersiveSpaceState = .closed
+                // Left some other way (e.g. Digital Crown): bring the hangar back.
+                if !model.hangarVisible { openWindow(id: AppModel.hangarWindowID) }
+            }
+    }
+}
+
+/// Ending a session. The hangar is opened *before* the space is dismissed (opening a window
+/// from a space that is tearing down is fragile), hand tracking stops before the scene goes
+/// away, and repeated taps are ignored.
+@MainActor
+enum Landing {
+    static func land(model: AppModel, openWindow: OpenWindowAction, dismiss: DismissImmersiveSpaceAction) async {
+        guard model.immersiveSpaceState == .open else { return }
+        model.immersiveSpaceState = .inTransition
+        model.handTracking.stop()
+        openWindow(id: AppModel.hangarWindowID)
+        await dismiss()
+    }
+}
+
+/// The RealityKit scene for one simulation.
+private struct CockpitRealityView: View {
+    @Environment(AppModel.self) private var model
     @State private var subscription: EventSubscription?
 
     var body: some View {
@@ -18,8 +60,9 @@ struct CockpitImmersiveView: View {
             // Flight instruments: part of the cockpit, so they fade in with it.
             scene.mountInCockpit(attachments.entity(for: Panel.hud),
                                  position: [-0.44, 1.06, -0.6], yaw: 0.45, pitch: -0.2)
+            // Buttons to the right of the centre speedometer.
             scene.mountInCockpit(attachments.entity(for: Panel.dashboard),
-                                 position: [0, 0.9, -0.52], yaw: 0, pitch: -0.75)
+                                 position: [0.38, 0.92, -0.5], yaw: -0.35, pitch: -0.75)
             // Session guidance: always visible, even before the cockpit fades in.
             scene.mountInGuide(attachments.entity(for: Panel.calibration),
                                position: [0, 1.4, -0.85], yaw: 0, pitch: 0)
@@ -39,14 +82,7 @@ struct CockpitImmersiveView: View {
             Attachment(id: Panel.simulator) { SimulatedHandsPanel().environment(model) }
             Attachment(id: Panel.complete) { CourseCompletePanel().environment(model) }
         }
-        .onAppear { model.immersiveSpaceState = .open }
-        .onDisappear {
-            // However the session ends (Land, Digital Crown, …), bring the hangar back.
-            subscription?.cancel()
-            model.handTracking.stop()
-            model.immersiveSpaceState = .closed
-            openWindow(id: AppModel.hangarWindowID)
-        }
+        .onDisappear { subscription?.cancel() }
     }
 
     private enum Panel {
@@ -61,6 +97,7 @@ struct CockpitImmersiveView: View {
 /// Land / Reset / Recenter, mounted flat on the main console.
 struct DashboardControls: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
     var body: some View {
@@ -68,12 +105,10 @@ struct DashboardControls: View {
             Button("Recenter", systemImage: "hand.raised", action: model.recenter)
             Button("Reset", systemImage: "arrow.counterclockwise", action: model.resetFlight)
             Button("Land", systemImage: "airplane.arrival") {
-                Task {
-                    model.immersiveSpaceState = .inTransition
-                    await dismissImmersiveSpace()
-                }
+                Task { await Landing.land(model: model, openWindow: openWindow, dismiss: dismissImmersiveSpace) }
             }
             .tint(.orange)
+            .disabled(model.immersiveSpaceState != .open)
         }
         .labelStyle(.titleAndIcon)
         .padding(14)
@@ -109,7 +144,6 @@ struct HUDView: View {
 /// Shown when the last gate is passed: time, score, best, and Retry / Land.
 struct CourseCompletePanel: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
     var body: some View {
         let course = model.course
@@ -131,15 +165,15 @@ struct CourseCompletePanel: View {
                         .font(.headline)
                         .foregroundStyle(.yellow)
                 }
+                if let remaining = model.autoAdvanceRemaining {
+                    Text("Next: \(model.nextCraft.name) in \(Int(remaining.rounded(.up)))…")
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
                 HStack(spacing: 20) {
+                    Button("Next: \(model.nextCraft.name)", systemImage: "forward.fill", action: model.startNextSimulation)
+                        .tint(.green)
                     Button("Retry", systemImage: "arrow.counterclockwise", action: model.resetFlight)
-                    Button("Land", systemImage: "airplane.arrival") {
-                        Task {
-                            model.immersiveSpaceState = .inTransition
-                            await dismissImmersiveSpace()
-                        }
-                    }
-                    .tint(.orange)
                 }
                 .labelStyle(.titleAndIcon)
                 .controlSize(.large)
@@ -161,6 +195,7 @@ struct CourseCompletePanel: View {
 /// "Hold out both hands, flat" — shown at session start and on Recenter.
 struct CalibrationPanel: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
     var body: some View {
@@ -184,7 +219,7 @@ struct CalibrationPanel: View {
                     .frame(width: 280)
                 Button(initial ? "Cancel" : "Back to cockpit") {
                     if initial {
-                        Task { await dismissImmersiveSpace() }
+                        Task { await Landing.land(model: model, openWindow: openWindow, dismiss: dismissImmersiveSpace) }
                     } else {
                         model.cancelRecenter()
                     }

@@ -77,9 +77,9 @@ final class CockpitScene {
         // Upper right of the windscreen, angled toward the pilot, clear of the flight path.
         score.entity.position = [0.48, 1.58, -1.05]
         score.entity.orientation = simd_quatf(angle: -0.4, axis: [0, 1, 0])
-        // Speedometer on the console, right of centre, angled up toward the pilot.
-        speedometer.entity.position = [0.3, 0.99, -0.6]
-        speedometer.entity.orientation = simd_quatf(angle: -0.3, axis: [0, 1, 0]) * simd_quatf(angle: -0.45, axis: [1, 0, 0])
+        // Speedometer at the centre of the dashboard, angled up toward the pilot.
+        speedometer.entity.position = [0, 0.99, -0.62]
+        speedometer.entity.orientation = simd_quatf(angle: -0.45, axis: [1, 0, 0])
         cockpit.addChild(speedometer.entity)
         cockpit.addChild(score.entity)
     }

@@ -42,6 +42,10 @@ final class AppModel {
     // MARK: Runtime
 
     var immersiveSpaceState = ImmersiveSpaceState.closed
+    /// Whether the hangar window is on screen.
+    var hangarVisible = false
+    /// `-FlyFreeAutoLaunch` fires once per run, not every time the hangar reappears.
+    var autoLaunched = false
     var simulatedHands = SimulatedHands()
     let handTracking = HandTrackingService()
     private(set) var phase = Phase.calibrating(initial: true)
@@ -61,6 +65,33 @@ final class AppModel {
     private(set) var bestTime: Double?
     /// True when the latest finish beat the previous best.
     private(set) var isNewBest = false
+    /// Changes whenever the immersive scene must be rebuilt (a new simulation in the same space).
+    private(set) var sceneID = 0
+    /// Seconds the completion screen shows before the next simulation starts.
+    static let autoAdvanceDelay = 8.0
+
+    /// The craft flown after this one (cycles through the catalog).
+    var nextCraft: CraftDefinition {
+        let all = CraftCatalog.all
+        let index = all.firstIndex { $0.id == craft.id } ?? 0
+        return all[(index + 1) % all.count]
+    }
+
+    /// Seconds until the completion screen moves on, or nil while flying.
+    var autoAdvanceRemaining: Double? {
+        guard let finish = course.finishTime else { return nil }
+        return max(0, Self.autoAdvanceDelay - (clock - finish))
+    }
+
+    /// Goes straight to the next craft's simulation in the same immersive space — no landing,
+    /// no hangar, and no re-calibration (the neutral hand pose carries over).
+    func startNextSimulation() {
+        craft = nextCraft
+        resetFlight()
+        sceneOpacity = 0
+        phase = calibration == nil ? .calibrating(initial: true) : .fadingIn(start: clock)
+        sceneID += 1
+    }
 
     private var calibrationSession = CalibrationSession()
     private var calibration: HandCalibration?
@@ -133,6 +164,10 @@ final class AppModel {
             fly(hands, dt: dt)
         case .flying:
             sceneOpacity = 1
+            if let remaining = autoAdvanceRemaining, remaining <= 0 {
+                startNextSimulation()
+                return
+            }
             // Development aid: `-FlyFreeSimPedal <degrees>` holds the simulated pedal after calibration.
             if inputSource == .simulated, simulatedHands.pedal == 0,
                let pedal = UserDefaults.standard.object(forKey: "FlyFreeSimPedal") as? Double ?? Double(UserDefaults.standard.string(forKey: "FlyFreeSimPedal") ?? "") {

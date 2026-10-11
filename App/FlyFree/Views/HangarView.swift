@@ -59,6 +59,8 @@ struct HangarView: View {
                 }
             }
             .navigationTitle("FlyFree")
+            .onAppear { model.hangarVisible = true }
+            .onDisappear { model.hangarVisible = false }
             .task {
                 // Development aid: `-FlyFreeAutoLaunch` skips the hangar (e.g. for simulator runs).
                 // `-FlyFreeCraft <id>` preselects a craft.
@@ -67,7 +69,8 @@ struct HangarView: View {
                     model.craft = craft
                 }
                 if ProcessInfo.processInfo.arguments.contains("-FlyFreeAutoLaunch"),
-                   model.immersiveSpaceState == .closed {
+                   !model.autoLaunched, model.immersiveSpaceState == .closed {
+                    model.autoLaunched = true
                     launch()
                 }
             }

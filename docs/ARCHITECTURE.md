@@ -185,7 +185,7 @@ The jet runs through the same pipeline, with more physics and a fly-by-wire laye
   - an endless plain with a runway and edge lights;
   - repeating trees, rocks and houses;
   - snow-capped mountains and clouds;
-  - the Valley Run course (nine gates facing along the route).
+  - the Valley Run course (five gates facing along the route).
 
 ## 6. Flight-sim direction
 

@@ -12,8 +12,9 @@ final class HandTrackingService {
     }
 
     private(set) var status = Status.idle
-    private let session = ARKitSession()
-    private let provider = HandTrackingProvider()
+    // A data provider can only be run once, so every flight gets a fresh session and provider.
+    private var session: ARKitSession?
+    private var provider: HandTrackingProvider?
 
     func start() async {
         guard status != .running else { return }
@@ -21,13 +22,17 @@ final class HandTrackingService {
             status = .unsupported
             return
         }
+        let session = ARKitSession()
         let authorization = await session.requestAuthorization(for: [.handTracking])
         guard authorization[.handTracking] == .allowed else {
             status = .denied
             return
         }
+        let provider = HandTrackingProvider()
         do {
             try await session.run([provider])
+            self.session = session
+            self.provider = provider
             status = .running
         } catch {
             status = .failed(error.localizedDescription)
@@ -35,12 +40,15 @@ final class HandTrackingService {
     }
 
     func stop() {
-        session.stop()
+        // Mark idle first so no frame reads from a provider that is shutting down.
         status = .idle
+        session?.stop()
+        session = nil
+        provider = nil
     }
 
     func latestHands() -> (left: HandFrame?, right: HandFrame?) {
-        guard status == .running else { return (nil, nil) }
+        guard status == .running, let provider, provider.state == .running else { return (nil, nil) }
         let anchors = provider.latestAnchors
         return (anchors.leftHand.flatMap(Self.frame), anchors.rightHand.flatMap(Self.frame))
     }

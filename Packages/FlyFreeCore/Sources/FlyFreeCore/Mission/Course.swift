@@ -30,13 +30,12 @@ public struct Course: Sendable, Equatable {
 }
 
 public enum CourseCatalog {
-    /// Nine airborne gates looping out from the runway and back, for the jet. Each gate faces
-    /// along the route from the previous one.
+    /// Five airborne gates looping out from the runway, for the jet. Each gate faces along the
+    /// route from the previous one.
     public static let valleyRun: Course = {
         let centers: [Vec3] = [
             Vec3(0, 120, -3500), Vec3(300, 220, -6000), Vec3(1200, 300, -8200),
-            Vec3(2600, 350, -9500), Vec3(4200, 300, -9800), Vec3(5600, 250, -8800),
-            Vec3(6400, 200, -7000), Vec3(6500, 180, -4800), Vec3(5800, 160, -2800),
+            Vec3(2600, 350, -9500), Vec3(4200, 300, -9800),
         ]
         var previous = Vec3(0, 0, 0)
         var gates: [Gate] = []
@@ -47,10 +46,10 @@ public enum CourseCatalog {
         return Course(name: "Valley Run", gates: gates)
     }()
 
-    /// Twelve gates weaving ahead of the launch point through the asteroid field.
+    /// Six gates weaving ahead of the launch point through the asteroid field.
     public static let asteroidSlalom = Course(
         name: "Asteroid Slalom",
-        gates: (1...12).map { i in
+        gates: (1...6).map { i in
             Gate(id: i - 1,
                  center: Vec3(Double(i % 3 - 1) * 40, Double(i % 2) * 30 - 15, Double(-250 * i)),
                  radius: 25)

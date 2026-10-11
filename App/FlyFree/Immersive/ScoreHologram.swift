@@ -10,8 +10,8 @@ final class ScoreHologram {
     private let scoreText = ModelEntity()
     private let detailText = ModelEntity()
     private let popupText = ModelEntity()
-    private let timeText = ModelEntity()
-    private var shownTenths: Int?
+    private let timeText = GlyphText(size: 0.022, color: .white)
+    private var finishedShown = false
     private var shown: (score: Int, passed: Int, streak: Int)?
     private var shownEvent: Double?
 
@@ -22,20 +22,19 @@ final class ScoreHologram {
             line.position = [0, y, 0]
             entity.addChild(line)
         }
-        for e in [scoreText, detailText, popupText, timeText] { entity.addChild(e) }
-        timeText.position = [0, -0.07, 0]
+        for e in [scoreText, detailText, popupText, timeText.entity] { entity.addChild(e) }
+        timeText.entity.position = [0, -0.07, 0]
         scoreText.position = [0, 0.004, 0]
         detailText.position = [0, -0.038, 0]
         popupText.position = [0, 0.07, 0]
     }
 
     func update(course: CourseTracker, lastEvent: (event: CourseTracker.Event, time: Double)?, now: Double) {
-        // Course clock, refreshed every tenth of a second.
-        let tenths = Int(course.elapsed(at: now) * 10)
-        if tenths != shownTenths {
-            shownTenths = tenths
-            set(timeText, ScoreHologram.format(Double(tenths) / 10), size: 0.022,
-                color: course.isFinished ? .holoGreen : .white)
+        // Course clock (glyph toggles only — cheap enough to run every frame).
+        timeText.set(ScoreHologram.format(course.elapsed(at: now)))
+        if course.isFinished != finishedShown {
+            finishedShown = course.isFinished
+            timeText.entity.scale = SIMD3(repeating: finishedShown ? 1.15 : 1)
         }
 
         let state = (course.score, course.gatesPassed, course.streak)

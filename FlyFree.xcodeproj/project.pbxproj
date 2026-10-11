@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1ACB28CD818146EC04A3D8D5 /* TelemetryReadout.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFB2942D28452FB77A672F99 /* TelemetryReadout.swift */; };
 		28D8F06E6677E6FEB59444B5 /* MeshFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 266D732FB769B0D2E2E67828 /* MeshFactory.swift */; };
+		3550BA86C7FC4D83D2E965C5 /* GlyphText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38B8CAA07458DF904E3B4081 /* GlyphText.swift */; };
 		49BFD3F6109C4F5F33499CB7 /* SpeedGauge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD0BDC3CE2CC1CD2B7BA897 /* SpeedGauge.swift */; };
 		4D6705378498654F50969B4B /* FlyFreeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A49F94D2C31E741F5AD7733 /* FlyFreeApp.swift */; };
 		5114B05119D20F5C693844D3 /* HandInstruments.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F11139EFAA7676545D33E0 /* HandInstruments.swift */; };
@@ -30,6 +31,7 @@
 		1AD0BDC3CE2CC1CD2B7BA897 /* SpeedGauge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedGauge.swift; sourceTree = "<group>"; };
 		266D732FB769B0D2E2E67828 /* MeshFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshFactory.swift; sourceTree = "<group>"; };
 		309823AF53AEF4C2AC6855FB /* HandTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTrackingService.swift; sourceTree = "<group>"; };
+		38B8CAA07458DF904E3B4081 /* GlyphText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlyphText.swift; sourceTree = "<group>"; };
 		3F394BC0A1F477D602645DC0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		55890B0B06A35B7C8C328D27 /* ScoreHologram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreHologram.swift; sourceTree = "<group>"; };
 		57DDA00698BAFD825C53567E /* FlyFree.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FlyFree.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -76,6 +78,7 @@
 			children = (
 				1779D97522FB27265B155A49 /* CockpitImmersiveView.swift */,
 				B415AE50D31D601BA97F07D7 /* CockpitScene.swift */,
+				38B8CAA07458DF904E3B4081 /* GlyphText.swift */,
 				B4F11139EFAA7676545D33E0 /* HandInstruments.swift */,
 				0EC6F18B9E616EC3B8D18691 /* HandPlate.swift */,
 				266D732FB769B0D2E2E67828 /* MeshFactory.swift */,
@@ -207,6 +210,7 @@
 				D362C12DF5BC32EE7F97036C /* CockpitImmersiveView.swift in Sources */,
 				D13F9B4775888D7FB3D46CA7 /* CockpitScene.swift in Sources */,
 				4D6705378498654F50969B4B /* FlyFreeApp.swift in Sources */,
+				3550BA86C7FC4D83D2E965C5 /* GlyphText.swift in Sources */,
 				5114B05119D20F5C693844D3 /* HandInstruments.swift in Sources */,
 				AA0D5CEB09E4F71CB4FEB513 /* HandPlate.swift in Sources */,
 				58CAFCB1B1F3000BD6FC3540 /* HandTrackingService.swift in Sources */,

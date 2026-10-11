@@ -25,7 +25,7 @@ That 3D hand motion becomes a *desired craft state* in the craft's current frame
 | Closed hands: reset orientation (stick), brake to a stop (throttle) | |
 | Separate acceleration limits for rotation and speed; braking about 3× stronger than speeding up | |
 | Gate course with flown-through states, a holographic score and a course clock | |
-| Completion screen: time, score and best time, with Retry or Land | |
+| Completion screen: time, score and best time; goes straight on to the next craft (or Retry) | |
 | **Atmospheric jet**: lift, drag and stall; control surfaces; landing gear; fly-by-wire; runway take-off; Valley Run gates | |
 | Flight-path marker showing where you're actually going | |
 | Speedometer with a scale on every craft (linear airspeed / logarithmic space speed) | |
