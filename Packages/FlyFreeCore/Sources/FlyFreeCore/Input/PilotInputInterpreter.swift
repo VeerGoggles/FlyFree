@@ -1,15 +1,5 @@
 import Foundation
 
-/// How the non-dominant hand sets throttle.
-public enum ThrottleInputMode: String, Sendable, CaseIterable, Identifiable {
-    /// Flat hand as a lever: tilt fingertips up for forward, down for reverse, level for zero.
-    /// Curl the hand to lock the current setting (cruise); flatten to take it back.
-    case lever
-    /// Finger curl: open = 0, fist = 1.
-    case fingerCurl
-    public var id: String { rawValue }
-}
-
 /// Per-hand open/closed flexion range used to normalize finger curl to 0...1.
 public struct CurlCalibration: Sendable, Equatable {
     public var open: Double
@@ -28,11 +18,10 @@ public struct CurlCalibration: Sendable, Equatable {
 
 public struct InterpreterConfiguration: Sendable, Equatable {
     public var dominantHand: Chirality = .right
-    public var throttleMode: ThrottleInputMode = .lever
     /// Hand-plane rotation (radians) for full deflection: pitch (fingertips up/down),
     /// yaw (wrist turned left/right), roll (forearm rotation).
     public var fullDeflection = Vec3(0.45, 0.5, 0.7)
-    /// Lever-throttle pitch (radians) for full throttle.
+    /// Throttle-hand fingertip tilt (radians) for full pedal.
     public var throttleFullDeflection = 0.45
     /// Curl at or below which a hand counts as flat; at or above which it counts as closed.
     public var flatCurl = 0.3
@@ -53,20 +42,21 @@ public struct InterpreterConfiguration: Sendable, Equatable {
 
 /// Turns raw hand frames into a `PilotInput`.
 ///
-/// Both hands are modelled as planes in space. Each plane's rotation relative to its
-/// calibrated neutral is the command: for the dominant hand, the rotation vector maps
-/// directly to pitch / yaw / roll; for the throttle hand, plane pitch is a lever.
-/// Closing the dominant hand releases the stick (attitude hold); closing the throttle hand
-/// locks the throttle.
+/// Both hands are modelled as planes in space, measured relative to their calibrated neutral.
+/// - **Stick hand, flat:** the plane's rotation vector → pitch / yaw / roll.
+/// - **Stick hand, closed:** reset orientation.
+/// - **Throttle hand, flat:** a pedal — fingertips down accelerates, up brakes / reverses.
+/// - **Throttle hand, closed:** brake to a stop.
 public struct PilotInputInterpreter: Sendable {
     public var configuration: InterpreterConfiguration
     public var calibration: HandCalibration?
 
     private var engagedAt: Double?
+    private var stickClosed = false
     private var rotationFilters: [OneEuroFilter]
     private var throttleFilter: OneEuroFilter
     private var throttle = 0.0
-    private var throttleLocked = false
+    private var throttleClosed = false
     private var lastThrottleSeen: Double?
 
     public init(configuration: InterpreterConfiguration = .init(), calibration: HandCalibration? = nil) {
@@ -82,17 +72,21 @@ public struct PilotInputInterpreter: Sendable {
         let offHand = c.dominantHand == .left ? right : left
         var input = PilotInput()
 
-        // Dominant hand plane → attitude.
-        if let hand = dominant, let plane = HandMetrics.plane(of: hand) {
+        // Stick hand.
+        if let hand = dominant, let plane = HandMetrics.plane(of: hand), let neutral = calibration?[c.dominantHand] {
             input.dominantHandTracked = true
             let curl = HandMetrics.curl(hand, calibration: c.curlCalibration)
-            if engagedAt == nil, curl <= c.flatCurl, calibration != nil {
-                engagedAt = time
-                for i in rotationFilters.indices { rotationFilters[i].reset() }
-            } else if engagedAt != nil, curl >= c.closedCurl {
+            if curl >= c.closedCurl {
                 engagedAt = nil
+                stickClosed = true
+            } else if curl <= c.flatCurl {
+                stickClosed = false
+                if engagedAt == nil {
+                    engagedAt = time
+                    for i in rotationFilters.indices { rotationFilters[i].reset() }
+                }
             }
-            if let start = engagedAt, let neutral = calibration?[c.dominantHand] {
+            if let start = engagedAt {
                 let rv = HandMetrics.rotationVector(current: plane.orientation, neutral: neutral)
                 let authority = c.engageRamp > 0 ? ((time - start) / c.engageRamp).clamped(to: 0...1) : 1
                 var rotation = Vec3.zero
@@ -103,37 +97,39 @@ public struct PilotInputInterpreter: Sendable {
                 input.rotation = rotation
             }
         } else {
+            input.dominantHandTracked = dominant != nil
             engagedAt = nil
+            stickClosed = false
         }
         input.engaged = engagedAt != nil
+        input.stickClosed = stickClosed
 
         // Throttle hand.
-        if let hand = offHand, let plane = HandMetrics.plane(of: hand) {
+        if let hand = offHand, let plane = HandMetrics.plane(of: hand), let neutral = calibration?[c.dominantHand.opposite] {
             input.throttleHandTracked = true
             lastThrottleSeen = time
             let curl = HandMetrics.curl(hand, calibration: c.curlCalibration)
-            switch c.throttleMode {
-            case .fingerCurl:
-                throttleLocked = false
-                throttle = throttleFilter.filter(curl, at: time).clamped(to: 0...1)
-            case .lever:
-                if curl >= c.closedCurl { throttleLocked = true }
-                else if curl <= c.flatCurl, throttleLocked {
-                    throttleLocked = false
-                    throttleFilter.reset()
-                }
-                if !throttleLocked, let neutral = calibration?[c.dominantHand.opposite] {
-                    let pitch = HandMetrics.relativeAngles(current: plane.orientation, neutral: neutral).x
-                    throttle = throttleFilter.filter((pitch / c.throttleFullDeflection).clamped(to: -1...1), at: time)
-                }
+            if curl >= c.closedCurl { throttleClosed = true }
+            else if curl <= c.flatCurl { throttleClosed = false }
+
+            if throttleClosed {
+                throttle = 0
+                throttleFilter.reset()
+            } else {
+                // Fingertips down (negative pitch) = accelerate, like pressing a pedal.
+                let pitch = HandMetrics.relativeAngles(current: plane.orientation, neutral: neutral).x
+                throttle = throttleFilter.filter((-pitch / c.throttleFullDeflection).clamped(to: -1...1), at: time)
             }
-        } else if let seen = lastThrottleSeen, time - seen > c.trackingLossGrace {
-            throttle = 0
-            throttleLocked = false
-            throttleFilter.reset()
+        } else {
+            input.throttleHandTracked = offHand != nil
+            if let seen = lastThrottleSeen, time - seen > c.trackingLossGrace {
+                throttle = 0
+                throttleClosed = false
+                throttleFilter.reset()
+            }
         }
         input.throttle = throttle
-        input.throttleLocked = throttleLocked
+        input.throttleClosed = throttleClosed
         return input
     }
 }

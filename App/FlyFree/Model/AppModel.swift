@@ -31,7 +31,6 @@ final class AppModel {
 
     var craft: CraftDefinition = CraftCatalog.genericSpacecraft
     var dominantHand: FlyFreeCore.Chirality = .right
-    var throttleMode: ThrottleInputMode = .lever
     var flightAssist: FlightAssistMode = .velocityHold
     var invertPitch = false
     #if targetEnvironment(simulator)
@@ -75,7 +74,6 @@ final class AppModel {
     func resetFlight() {
         var config = InterpreterConfiguration()
         config.dominantHand = dominantHand
-        config.throttleMode = throttleMode
         var craft = craft
         craft.profile.invertPitch = invertPitch
         pipeline = FlightPipeline(craft: craft, interpreter: config, calibration: calibration, assist: flightAssist)

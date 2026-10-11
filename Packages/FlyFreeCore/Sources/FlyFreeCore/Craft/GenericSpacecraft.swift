@@ -1,11 +1,13 @@
 extension CraftCatalog {
     /// A generic 12 t spacecraft: two main engines at the tail, a 14-thruster RCS
     /// (pitch/yaw/strafe quads at nose and tail, roll pairs on the wingtips, two retro
-    /// thrusters at the nose). No gravity or atmosphere is assumed.
+    /// thrusters at the nose). Thrusters are sized for strong braking. No gravity or atmosphere is assumed.
     public static let genericSpacecraft: CraftDefinition = {
         let width = 6.0, height = 3.0, length = 14.0
         let nose = -length / 2 + 1, tail = length / 2 - 1
-        let rcsForce = 4_000.0
+        // Sized so the craft can brake (rotation and speed) about 3× harder than it speeds up.
+        let rcsForce = 25_000.0
+        let retroForce = 75_000.0
 
         var actuators: [Actuator] = [
             Actuator(id: "main.L", kind: .mainEngine, position: Vec3(-1.5, 0, length / 2),
@@ -43,7 +45,7 @@ extension CraftCatalog {
         for (side, x) in [("L", -1.0), ("R", 1.0)] {
             actuators.append(Actuator(id: "rcs.retro\(side)", kind: .rcsThruster,
                                       position: Vec3(x, 0, -length / 2), direction: Vec3(0, 0, 1),
-                                      maxForce: rcsForce * 2, priority: 1))
+                                      maxForce: retroForce, priority: 1))
         }
 
         return CraftDefinition(
@@ -54,6 +56,11 @@ extension CraftCatalog {
             actuators: actuators,
             profile: ControlProfile(
                 maxAngularRate: Vec3(0.6, 0.5, 1.0),
+                // Rotation and translation are tuned independently.
+                angularAcceleration: Vec3(0.4, 0.4, 0.6),   // rad/s² spin-up
+                angularDeceleration: Vec3(1.2, 1.2, 1.8),   // rad/s² spin-down
+                linearAcceleration: 4,                       // m/s² (was 10)
+                linearDeceleration: 12,                      // m/s² braking
                 maxForwardSpeed: 120_000,
                 maxStrafeSpeed: 10
             ),

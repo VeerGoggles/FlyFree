@@ -5,7 +5,8 @@
 Hold your hands out **flat**. FlyFree fits a plane to each hand's fingers and measures how it rotates from your calibrated neutral pose.
 
 - **Stick hand:** fingertips up or down to pitch, turn the wrist to yaw, rotate the forearm to roll.
-- **Throttle hand:** works like a lever. Tip it up to go forward and down to reverse.
+- **Throttle hand:** works like a car's gas pedal. Push the fingertips down to accelerate, hold it level to keep your speed, and tip it up to brake.
+- **Close either hand** for a quick reset: a closed stick hand returns the craft to its starting orientation, and a closed throttle hand brakes to a full stop.
 
 That 3D hand motion becomes a *desired craft state* in the craft's current frame. A translator then works out which engines, thrusters or control surfaces will achieve it. You sit in a cockpit that matches the craft you picked; it fades in around you once your hands lock in.
 
@@ -20,7 +21,9 @@ That 3D hand motion becomes a *desired craft state* in the craft's current frame
 | Generic 12 t spacecraft: 2 main engines and a 14-thruster RCS, in deep space with no gravity, drag or wind | Calibration flow, RCS strafing, more craft |
 | Flat-hand stick from a plane fitted to about 20 finger joints | Atmospheric jet with aero surfaces |
 | "Hold out both hands, flat" calibration, then the cockpit and space fade in | Haptic and audio cues |
-| Flat-hand throttle lever: forward, reverse, and close the hand to lock cruise | |
+| Flat-hand throttle pedal: push down to accelerate, level to hold speed, tip up to brake | |
+| Closed hands: reset orientation (stick), brake to a stop (throttle) | |
+| Separate acceleration limits for rotation and speed; braking about 3× stronger than speeding up | |
 | Rate-command / attitude-hold control in the craft's own frame | |
 | Hangar window hides during flight; Land, Reset and Recenter are on the dashboard | |
 | Velocity-hold flight assist, or fully Newtonian flight | Comfort options (vignette, horizon cues) |
@@ -68,9 +71,11 @@ cd Packages/FlyFreeCore && swift test
 | Stick | Tip fingertips up or down (the plane's front-to-back angle) | Pitch |
 | Stick | Turn the wrist horizontally | Yaw |
 | Stick | Rotate the forearm | Roll |
-| Stick | Close the hand | Release the stick; the craft holds its attitude |
-| Throttle | Tip fingertips up / level / down | Forward / stop / reverse (target speed in velocity-hold mode) |
-| Throttle | Close the hand | Lock cruise; flatten to take control back |
+| Stick | Close the hand | Return to the starting orientation |
+| Throttle | Push fingertips down | Accelerate (4 m/s² at full pedal) |
+| Throttle | Hold level | Keep current speed |
+| Throttle | Tip fingertips up | Brake, then reverse |
+| Throttle | Close the hand | Brake to a full stop (12 m/s²) |
 
 Dashboard buttons: **Recenter** (re-calibrate), **Reset** (back to start), **Land** (return to the hangar).
 

@@ -47,7 +47,7 @@ public struct FlightPipeline: Sendable {
     ) {
         self.craft = craft
         self.interpreter = PilotInputInterpreter(configuration: interpreter, calibration: calibration)
-        self.mapper = IntentMapper(profile: craft.profile, assist: assist)
+        self.mapper = IntentMapper(profile: craft.profile, assist: assist, resetAttitude: initialState.orientation)
         self.controller = FlightController(gains: craft.gains, mass: craft.mass,
                                            maxForwardThrust: craft.maxForwardThrust,
                                            maxHoldRate: craft.profile.maxAngularRate * 0.25)
@@ -74,7 +74,7 @@ public struct FlightPipeline: Sendable {
         let frameDt = dt.clamped(to: 0...0.1)
         time += frameDt
         accumulator += frameDt
-        let desired = mapper.map(input, state: state)
+        let desired = mapper.map(input, state: state, dt: frameDt)
 
         var demand = Wrench.zero
         var achieved = allocator.achievedWrench

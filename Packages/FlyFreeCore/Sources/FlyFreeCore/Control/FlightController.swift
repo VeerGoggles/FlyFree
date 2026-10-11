@@ -8,7 +8,7 @@ public struct ControllerGains: Sendable, Equatable {
     /// Velocity loop gain (1/s) for velocity-hold assist.
     public var velocity: Double
 
-    public init(rate: Vec3 = Vec3(2.5, 2.5, 3.0), attitude: Double = 1.2, velocity: Double = 0.8) {
+    public init(rate: Vec3 = Vec3(6, 6, 6), attitude: Double = 1.2, velocity: Double = 2.0) {
         self.rate = rate
         self.attitude = attitude
         self.velocity = velocity
@@ -41,7 +41,8 @@ public struct FlightController: Sendable {
 
         let omega = state.angularVelocity
         let inertia = mass.inertia
-        let torque = inertia * (gains.rate * (targetRate - omega)) + simd_cross(omega, inertia * omega)
+        let torque = inertia * (desired.angularAcceleration + gains.rate * (targetRate - omega))
+            + simd_cross(omega, inertia * omega)
 
         let force: Vec3
         switch desired.assist {
@@ -49,7 +50,7 @@ public struct FlightController: Sendable {
             force = BodyAxis.forward * desired.thrustFraction * maxForwardThrust
         case .velocityHold:
             let bodyVelocity = state.orientation.inverse.act(state.velocity)
-            force = (desired.bodyVelocity - bodyVelocity) * gains.velocity * mass.mass
+            force = (desired.linearAcceleration + (desired.bodyVelocity - bodyVelocity) * gains.velocity) * mass.mass
         }
         return Wrench(force: force, torque: torque)
     }

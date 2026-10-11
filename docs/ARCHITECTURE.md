@@ -11,7 +11,9 @@ Your dominant hand is the stick:
 - turning the wrist horizontally yaws it,
 - rotating the forearm rolls it.
 
-Your other hand is a throttle lever: tip it up for forward, down for reverse.
+Your other hand is a throttle pedal, like a car's: push the fingertips down to accelerate, hold it level to keep your speed, and tip it up to brake.
+
+Closing a hand is a reset gesture. A closed stick hand returns the craft to its starting orientation, and a closed throttle hand brakes to a full stop.
 
 ## 2. Guiding principles
 
@@ -67,22 +69,33 @@ Your other hand is a throttle lever: tip it up for forward, down for reverse.
   - `r.z`: forearm rotation → **roll**
 
   Each component is divided by its full deflection (0.45, 0.5 and 0.7 rad). Because the rotation is modelled as one 3D rotation rather than three independently measured angles, combined motions stay consistent.
-- **Dead-man:** the stick engages while the hand is flat (curl ≤ 0.3) and releases when it closes (curl ≥ 0.5). Authority ramps in over about 60 ms after engaging so there is no jolt.
-- **Throttle (lever, the default):** the throttle hand's plane pitch relative to its neutral pose. Fingertips up gives +1 (forward), level gives 0, down gives −1 (reverse). Closing the hand **locks** the current setting (cruise), and flattening it takes control back. *Finger curl* (open = 0, fist = 1) remains available as an alternative.
+- **Stick hand states:**
+  - flat (curl ≤ 0.3): flying, with authority ramping in over about 60 ms so there is no jolt;
+  - closed (curl ≥ 0.5): *reset orientation*;
+  - not tracked: attitude hold.
+- **Throttle (pedal):** the throttle hand's plane pitch relative to its neutral pose, sign-flipped. Fingertips **down** gives +1 (accelerate), level gives 0, up gives −1 (brake, then reverse). Closing the hand means *brake to a stop*.
 - **Filtering:** a 1€ filter on every axis, tuned for responsiveness: about 33 ms resting time constant for the stick and 40 ms for the throttle. The values are in `InterpreterConfiguration`.
 - **Tracking loss:** losing the stick hand releases it (attitude hold). Losing the throttle hand holds the throttle for 0.5 s, then sets it to 0.
 
 ### 3.3 Intent → `DesiredCraftState`, in the craft's current frame
 - `IntentMapper` applies the craft's `ControlProfile` (deadzone, expo, maximum rates) and works in the craft's **current body frame**.
-- **Rate-command / attitude-hold:**
-  - With the stick deflected, the desired state is a body angular rate.
-  - With the stick centered or released, the craft's attitude becomes a *target to hold* once rotation has settled. Capturing it only after settling avoids snap-back when the stick is released mid-turn.
-- **Flight assist:**
-  - `velocityHold` (default): throttle sets the desired forward speed; negative throttle reverses at 25% of maximum speed. Lateral drift is nulled.
-  - `off`: throttle is a fraction of the main engines' thrust; negative throttle fires the retro thrusters.
+- **Smooth references with low momentum.** The mapper produces *reference* signals, and the controller tracks them tightly using acceleration feed-forward. Rotation and translation have **separate** limits, and braking is about 3× stronger than speeding up, so the craft eases into motion but settles quickly.
+
+  | | Speed up | Slow down |
+  |---|---|---|
+  | Rotation (pitch, yaw, roll) | 0.4, 0.4, 0.6 rad/s² | 1.2, 1.2, 1.8 rad/s² |
+  | Translation | 4 m/s² | 12 m/s² |
+- **Rotation:** the stick sets a target body rate, and the rate reference slews toward it.
+  - Centered or released: once rotation has settled, the current attitude becomes a *target to hold*. Capturing it only after settling avoids snap-back when the stick is released mid-turn.
+  - Closed stick hand: the craft returns to its reset attitude (the launch attitude), using the same limits.
+- **Translation in velocity-hold mode (default):** the pedal *integrates* the forward-speed reference: down accelerates, level holds speed, up brakes and then reverses (reverse is capped at 25% of top speed). Lateral drift is nulled.
+- **Translation in Newtonian mode (`off`):** the pedal is a thrust fraction.
+- **Closed throttle hand (either mode):** the velocity reference ramps to zero at the braking limit.
 
 ### 3.4 Control → body `Wrench` demand
-- **Rotation:** `ω* = ω_cmd + clamp(K_att · log(q⁻¹ · q_target))`, then `τ = I·K_rate·(ω* − ω) + ω × Iω` (gyroscopic compensation).
+- **Rotation:** `ω* = ω_ref + clamp(K_att · log(q⁻¹ · q_target))`, then `τ = I·(α_ff + K_rate·(ω* − ω)) + ω × Iω`. Here `α_ff` is the feed-forward acceleration and the last term is gyroscopic compensation.
+- **Translation:** `F = m·(a_ff + K_v·(v_ref − v))`.
+- **Thruster sizing:** the RCS (25 kN per thruster) and retro thrusters (75 kN each) are sized so the braking limits are physically reachable.
 - **Translation:** `F = m·K·(v* − v)` in the body frame, or a direct thrust fraction when assist is off.
 - Later: PID with integral and anti-windup, and gain scheduling for aircraft (dynamic pressure).
 
@@ -126,7 +139,7 @@ Your other hand is a throttle lever: tip it up for forward, down for reverse.
 - **Precision:** the core uses `Double`. Values are converted to `Float` only at the RealityKit boundary.
 
 ## 6. Open questions for alignment
-1. **Throttle lever.** Should a level hand mean zero speed (current), or should the lever be offset so a resting hand cruises? Should the throttle hand's yaw and roll drive RCS strafing?
+1. **Throttle hand's other axes.** Should the throttle hand's yaw and roll drive RCS strafing?
 2. **Pitch source.** Should it be the whole fitted plane (wrist plus finger bend), or should wrist flexion and knuckle bend be separate signals, for example a finer trim from the fingers?
 3. **Neutral re-capture.** Recenter is manual today. Should the app also recenter automatically when both hands are held flat and still with the stick released?
 4. **Seated or standing pilot,** and should the cockpit scale to the pilot's measured hand height from calibration?

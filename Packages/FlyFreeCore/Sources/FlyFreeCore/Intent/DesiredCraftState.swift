@@ -19,6 +19,10 @@ public struct DesiredCraftState: Sendable, Equatable {
     public var thrustFraction: Double
     /// `.velocityHold`: desired body-frame velocity (m/s).
     public var bodyVelocity: Vec3
+    /// Feed-forward: how fast the rate reference is changing (rad/s², body).
+    public var angularAcceleration: Vec3 = .zero
+    /// Feed-forward: how fast the velocity reference is changing (m/s², body).
+    public var linearAcceleration: Vec3 = .zero
 
     public init(
         angularRate: Vec3 = .zero,

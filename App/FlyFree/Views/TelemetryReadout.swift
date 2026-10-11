@@ -8,8 +8,8 @@ struct TelemetryReadout: View {
         Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
             GridRow {
                 Text("Stick")
-                Text(telemetry.input.engaged ? "ENGAGED" : "released · holding")
-                    .foregroundStyle(telemetry.input.engaged ? .green : .secondary)
+                Text(telemetry.input.stickClosed ? "RESETTING" : telemetry.input.engaged ? "ENGAGED" : "released · holding")
+                    .foregroundStyle(telemetry.input.stickClosed ? .purple : telemetry.input.engaged ? .green : .secondary)
                     .bold()
             }
             GridRow { Text("Command P/Y/R"); Text(triple(telemetry.input.rotation, "%+.2f")) }
@@ -17,9 +17,10 @@ struct TelemetryReadout: View {
             GridRow {
                 Text("Throttle")
                 HStack {
-                    Text(String(format: "%+.0f%%", telemetry.input.throttle * 100))
-                    if telemetry.input.throttleLocked {
-                        Image(systemName: "lock.fill").foregroundStyle(.cyan)
+                    if telemetry.input.throttleClosed {
+                        Text("BRAKING").bold().foregroundStyle(.red)
+                    } else {
+                        Text(String(format: "%+.0f%%", telemetry.input.throttle * 100))
                     }
                 }
             }

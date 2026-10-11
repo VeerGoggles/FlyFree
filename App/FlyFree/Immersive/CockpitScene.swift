@@ -92,13 +92,14 @@ final class CockpitScene {
     // MARK: - Hand planes
 
     private enum PaddleStyle: Equatable {
-        case waiting, ready, engaged, released, locked
+        case waiting, ready, engaged, released, resetting, braking
         var color: UIColor {
             switch self {
             case .waiting: UIColor(red: 1, green: 0.6, blue: 0.1, alpha: 1)
             case .ready, .engaged: UIColor(red: 0.2, green: 1, blue: 0.5, alpha: 1)
             case .released: UIColor(white: 0.6, alpha: 1)
-            case .locked: UIColor(red: 0.2, green: 0.8, blue: 1, alpha: 1)
+            case .resetting: UIColor(red: 0.7, green: 0.4, blue: 1, alpha: 1)
+            case .braking: UIColor(red: 1, green: 0.25, blue: 0.2, alpha: 1)
             }
         }
     }
@@ -131,9 +132,10 @@ final class CockpitScene {
                 let readiness = chirality == .left ? model.calibrationProgress.left : model.calibrationProgress.right
                 style = readiness == .ready ? .ready : .waiting
             } else if chirality == model.dominantHand {
-                style = model.telemetry?.input.engaged == true ? .engaged : .released
+                let input = model.telemetry?.input
+                style = input?.stickClosed == true ? .resetting : (input?.engaged == true ? .engaged : .released)
             } else {
-                style = model.telemetry?.input.throttleLocked == true ? .locked : .engaged
+                style = model.telemetry?.input.throttleClosed == true ? .braking : .engaged
             }
             if paddleStyles[chirality] != style {
                 paddleStyles[chirality] = style

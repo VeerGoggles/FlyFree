@@ -86,11 +86,9 @@ struct HUDView: View {
             Text(model.craft.name).font(.headline)
             if let telemetry = model.telemetry {
                 TelemetryReadout(telemetry: telemetry)
-                if !telemetry.input.engaged {
-                    Text("Flatten your \(model.dominantHand.rawValue) hand to take the stick.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text("Close stick hand: reset orientation · Close throttle hand: stop")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } else {
                 Text("Starting systems…")
             }
@@ -178,17 +176,17 @@ struct SimulatedHandsPanel: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Simulated hands").font(.headline)
                 Toggle("Hands present", isOn: $model.simulatedHands.present)
-                Toggle("Stick hand flat", isOn: $model.simulatedHands.stickFlat)
+                Toggle("Stick hand closed (reset)", isOn: $model.simulatedHands.stickClosed)
                 SimSlider(label: "Pitch", value: $model.simulatedHands.pitch, range: -30...30)
                 SimSlider(label: "Yaw", value: $model.simulatedHands.yaw, range: -30...30)
                 SimSlider(label: "Roll", value: $model.simulatedHands.roll, range: -40...40)
-                SimSlider(label: "Throttle", value: $model.simulatedHands.throttlePitch, range: -30...30)
-                Toggle("Throttle hand closed", isOn: $model.simulatedHands.throttleClosed)
+                SimSlider(label: "Pedal", value: $model.simulatedHands.pedal, range: -30...30)
+                Toggle("Throttle hand closed (stop)", isOn: $model.simulatedHands.throttleClosed)
                 Button("Center") {
                     model.simulatedHands.pitch = 0
                     model.simulatedHands.yaw = 0
                     model.simulatedHands.roll = 0
-                    model.simulatedHands.throttlePitch = 0
+                    model.simulatedHands.pedal = 0
                 }
             }
             .padding(20)

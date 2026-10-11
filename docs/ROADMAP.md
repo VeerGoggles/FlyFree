@@ -7,7 +7,9 @@ Each phase ends with something you can fly. Checked items are already in the rep
 - [x] Generic spacecraft in deep space: 2 main engines, 14 RCS thrusters
 - [x] Flat-hand stick from a fitted finger plane, with rotation-vector mapping
 - [x] Hands-out-flat calibration, then the cockpit and space fade in
-- [x] Flat-hand lever throttle (forward and reverse, close to lock); finger-curl alternative
+- [x] Flat-hand pedal throttle (down accelerates, level holds speed, up brakes)
+- [x] Closed hands: reset orientation (stick), brake to a stop (throttle)
+- [x] Separate rotation and translation acceleration limits; low-momentum braking with feed-forward tracking
 - [x] Rate-command / attitude-hold in the craft's frame
 - [x] In-scene dashboard (Recenter, Reset, Land); hangar hidden during flight
 - [x] Velocity-hold and Newtonian flight assist

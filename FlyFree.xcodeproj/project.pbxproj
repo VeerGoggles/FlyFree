@@ -23,7 +23,7 @@
 		1779D97522FB27265B155A49 /* CockpitImmersiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CockpitImmersiveView.swift; sourceTree = "<group>"; };
 		309823AF53AEF4C2AC6855FB /* HandTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTrackingService.swift; sourceTree = "<group>"; };
 		3F394BC0A1F477D602645DC0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		57DDA00698BAFD825C53567E /* FlyFree.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FlyFree.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		57DDA00698BAFD825C53567E /* FlyFree.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlyFree.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6151C23B1DFEBD0A1DA059D0 /* HangarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HangarView.swift; sourceTree = "<group>"; };
 		70108A51DFB65F0D31F8448B /* SimulatedHands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatedHands.swift; sourceTree = "<group>"; };
 		B415AE50D31D601BA97F07D7 /* CockpitScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CockpitScene.swift; sourceTree = "<group>"; };
@@ -264,6 +264,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TJ7N3B2UFM;
 				INFOPLIST_FILE = App/FlyFree/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -346,6 +347,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TJ7N3B2UFM;
 				INFOPLIST_FILE = App/FlyFree/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

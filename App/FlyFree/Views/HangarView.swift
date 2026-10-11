@@ -37,10 +37,6 @@ struct HangarView: View {
                         Text("Right").tag(FlyFreeCore.Chirality.right)
                         Text("Left").tag(FlyFreeCore.Chirality.left)
                     }
-                    Picker("Throttle", selection: $model.throttleMode) {
-                        Text("Flat-hand lever").tag(ThrottleInputMode.lever)
-                        Text("Finger curl").tag(ThrottleInputMode.fingerCurl)
-                    }
                     Picker("Flight assist", selection: $model.flightAssist) {
                         Text("Velocity hold").tag(FlightAssistMode.velocityHold)
                         Text("Off (Newtonian)").tag(FlightAssistMode.off)
@@ -54,8 +50,8 @@ struct HangarView: View {
                 } footer: {
                     Text("""
                     Hold both hands out flat, palms down, until they lock in — the cockpit fades in around you.
-                    Stick hand: tip fingertips up/down to pitch, turn the wrist left/right to yaw, rotate the forearm to roll. Close it to let go; the craft holds attitude.
-                    Throttle hand: tip fingertips up for forward, down for reverse. Close it to lock cruise.
+                    Stick hand: tip fingertips up/down to pitch, turn the wrist left/right to yaw, rotate the forearm to roll. Close it to return to the starting orientation.
+                    Throttle hand is a pedal: push fingertips down to accelerate, level to hold speed, tip up to brake. Close it to brake to a stop.
                     """)
                 }
             }
