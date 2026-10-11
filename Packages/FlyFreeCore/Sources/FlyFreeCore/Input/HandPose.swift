@@ -56,23 +56,7 @@ public struct StartingPose: Sendable, Equatable {
             : [.left: stick.mirrored, .right: throttle.mirrored]
     }
 
-    /// Spacecraft: both hands flat, palms down, fingers forward.
+    /// Both hands flat, palms down, fingers forward. FlyFree's hands are always flat — never
+    /// turned sideways — so every craft starts here.
     public static let bothFlat = StartingPose(stick: .flat, throttle: .flat)
-
-    /// Jet: throttle hand down (flat, palm down), stick hand up (vertical, thumb up, as if gripping
-    /// a control stick).
-    public static let stickAndThrottle = StartingPose(
-        stick: HandPose(backOfHand: Vec3(1, 0, 0), fingers: Vec3(0, 0, -1),
-                        instruction: "Thumb up, palm facing in, like gripping a stick"),
-        throttle: HandPose(backOfHand: Vec3(0, 1, 0), fingers: Vec3(0, 0, -1),
-                           instruction: "Flat, palm down, on the throttle")
-    )
-
-    /// Drone: both hands vertical, thumbs up, palms facing each other, like holding a controller.
-    public static let controllerGrip = StartingPose(
-        stick: HandPose(backOfHand: Vec3(1, 0, 0), fingers: Vec3(0, 0, -1),
-                        instruction: "Thumb up, palm facing in"),
-        throttle: HandPose(backOfHand: Vec3(-1, 0, 0), fingers: Vec3(0, 0, -1),
-                           instruction: "Thumb up, palm facing in")
-    )
 }

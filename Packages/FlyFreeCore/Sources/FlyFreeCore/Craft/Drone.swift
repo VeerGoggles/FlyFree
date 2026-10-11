@@ -48,7 +48,7 @@ extension CraftCatalog {
             startState: RigidBodyState(position: Vec3(0, skidHeight - 0.05, 0)),
             course: CourseCatalog.rooftopRun,
             speedGauge: GaugeScale(kind: .linear(max: 40, major: 10, minor: 2), unit: "m/s"),
-            startingPose: .controllerGrip,
+            startingPose: .bothFlat,
             throttleHand: .position
         )
     }()

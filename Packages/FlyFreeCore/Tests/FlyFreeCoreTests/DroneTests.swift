@@ -42,8 +42,8 @@ import simd
         #expect(abs(c[0] - c[2]) < 0.01 && abs(c[1] - c[3]) < 0.01 && abs(c[0] - c[1]) > 0.1)
     }
 
-    @Test func startsWithTheThrottleHandTurnedUpAndDrivenByPosition() {
-        #expect(drone.startingPose == .controllerGrip)
+    @Test func startsFlatWithTheThrottleHandDrivenByPosition() {
+        #expect(drone.startingPose == .bothFlat)
         #expect(drone.throttleHand == .position)
     }
 
@@ -131,16 +131,15 @@ import simd
 /// The interpreter turns the throttle hand's position (relative to its calibrated spot) into
 /// translation commands.
 @Suite struct HandPositionInputTests {
-    private let thumbUp = Quat(angle: .pi / 2, axis: Vec3(0, 0, 1))
-    private let stickUp = Quat(angle: -.pi / 2, axis: Vec3(0, 0, 1))
+    private let flat = Quat(ix: 0, iy: 0, iz: 0, r: 1)
 
     private func frames(leftAt offset: Vec3) -> (HandFrame, HandFrame) {
-        (SyntheticHand.make(chirality: .left, orientation: thumbUp, position: Vec3(-0.2, 1.0, -0.35) + offset),
-         SyntheticHand.make(chirality: .right, orientation: stickUp, position: Vec3(0.2, 1.0, -0.35)))
+        (SyntheticHand.make(chirality: .left, orientation: flat, position: Vec3(-0.2, 1.0, -0.35) + offset),
+         SyntheticHand.make(chirality: .right, orientation: flat, position: Vec3(0.2, 1.0, -0.35)))
     }
 
     @Test func calibrationCapturesHandPositions() throws {
-        var session = CalibrationSession(pose: .controllerGrip)
+        var session = CalibrationSession(pose: .bothFlat)
         var progress = CalibrationProgress(left: .notDetected, right: .notDetected, fraction: 0)
         var t = 0.0
         while progress.result == nil, t < 3 {
@@ -161,7 +160,7 @@ import simd
         config.throttleHandMode = .position
         var interpreter = PilotInputInterpreter(
             configuration: config,
-            calibration: HandCalibration(left: thumbUp, right: stickUp, leftPosition: home,
+            calibration: HandCalibration(left: flat, right: flat, leftPosition: home,
                                          rightPosition: try #require(HandMetrics.plane(of: r0)).centroid))
         var input = PilotInput()
         // 7.5 cm up and 15 cm forward: half climb, full forward.
