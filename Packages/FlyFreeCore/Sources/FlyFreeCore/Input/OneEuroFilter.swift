@@ -2,7 +2,7 @@ import Foundation
 
 /// The 1€ filter (Casiez et al., 2012): low jitter at rest, low lag when moving fast.
 /// Well suited to hand-tracking signals.
-public struct OneEuroFilter: Sendable {
+public struct OneEuroFilter: Sendable, Equatable {
     public var minCutoff: Double
     public var beta: Double
     public var derivativeCutoff: Double

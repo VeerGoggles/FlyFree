@@ -67,9 +67,9 @@ Your other hand is a throttle lever: tip it up for forward, down for reverse.
   - `r.z`: forearm rotation → **roll**
 
   Each component is divided by its full deflection (0.45, 0.5 and 0.7 rad). Because the rotation is modelled as one 3D rotation rather than three independently measured angles, combined motions stay consistent.
-- **Dead-man:** the stick engages while the hand is flat (curl ≤ 0.3) and releases when it closes (curl ≥ 0.5). Authority ramps in over 0.25 s after engaging so there is no jolt.
+- **Dead-man:** the stick engages while the hand is flat (curl ≤ 0.3) and releases when it closes (curl ≥ 0.5). Authority ramps in over about 60 ms after engaging so there is no jolt.
 - **Throttle (lever, the default):** the throttle hand's plane pitch relative to its neutral pose. Fingertips up gives +1 (forward), level gives 0, down gives −1 (reverse). Closing the hand **locks** the current setting (cruise), and flattening it takes control back. *Finger curl* (open = 0, fist = 1) remains available as an alternative.
-- **Filtering:** a 1€ filter on every axis.
+- **Filtering:** a 1€ filter on every axis, tuned for responsiveness: about 33 ms resting time constant for the stick and 40 ms for the throttle. The values are in `InterpreterConfiguration`.
 - **Tracking loss:** losing the stick hand releases it (attitude hold). Losing the throttle hand holds the throttle for 0.5 s, then sets it to 0.
 
 ### 3.3 Intent → `DesiredCraftState`, in the craft's current frame

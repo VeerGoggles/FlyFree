@@ -38,7 +38,12 @@ public struct InterpreterConfiguration: Sendable, Equatable {
     public var flatCurl = 0.3
     public var closedCurl = 0.5
     /// Seconds to fade authority in after the stick engages (avoids a jolt).
-    public var engageRamp = 0.25
+    public var engageRamp = 0.0625
+    /// Smoothing of the stick and throttle signals (1€ filter); every cutoff is 4× the original
+    /// tuning, so transitions settle ~4× faster. The resting time constant is
+    /// 1 / (2π · minCutoff): ~33 ms for the stick, ~40 ms for the throttle.
+    public var rotationSmoothing = OneEuroFilter(minCutoff: 4.8, beta: 1.6, derivativeCutoff: 4)
+    public var throttleSmoothing = OneEuroFilter(minCutoff: 4.0, beta: 1.2, derivativeCutoff: 4)
     /// Seconds to hold the last throttle after the throttle hand loses tracking.
     public var trackingLossGrace = 0.5
     public var curlCalibration = CurlCalibration()
@@ -58,8 +63,8 @@ public struct PilotInputInterpreter: Sendable {
     public var calibration: HandCalibration?
 
     private var engagedAt: Double?
-    private var rotationFilters = [OneEuroFilter](repeating: OneEuroFilter(minCutoff: 1.2, beta: 0.4), count: 3)
-    private var throttleFilter = OneEuroFilter(minCutoff: 1.0, beta: 0.3)
+    private var rotationFilters: [OneEuroFilter]
+    private var throttleFilter: OneEuroFilter
     private var throttle = 0.0
     private var throttleLocked = false
     private var lastThrottleSeen: Double?
@@ -67,6 +72,8 @@ public struct PilotInputInterpreter: Sendable {
     public init(configuration: InterpreterConfiguration = .init(), calibration: HandCalibration? = nil) {
         self.configuration = configuration
         self.calibration = calibration
+        self.rotationFilters = Array(repeating: configuration.rotationSmoothing, count: 3)
+        self.throttleFilter = configuration.throttleSmoothing
     }
 
     public mutating func update(left: HandFrame?, right: HandFrame?, time: Double) -> PilotInput {
