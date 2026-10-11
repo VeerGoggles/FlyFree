@@ -4,12 +4,6 @@ import SwiftUI
 struct FlyFreeApp: App {
     @State private var model = AppModel()
 
-    init() {
-        if UserDefaults.standard.object(forKey: "FlyFreeHD") == nil || UserDefaults.standard.bool(forKey: "FlyFreeHD") {
-            HDScenery.setup()
-        }
-    }
-
     var body: some Scene {
         WindowGroup(id: AppModel.hangarWindowID) {
             HangarView()

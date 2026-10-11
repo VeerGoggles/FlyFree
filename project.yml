@@ -2,16 +2,11 @@ name: FlyFree
 options:
   bundleIdPrefix: io.github.flyfree
   deploymentTarget:
-    visionOS: "26.0"
+    visionOS: "2.0"
   createIntermediateGroups: true
 packages:
   FlyFreeCore:
     path: Packages/FlyFreeCore
-  # Procedural photoreal assets and PBR materials. Vendored from
-  # https://github.com/hunterh37/RealityHD @ c01e31b with small compile patches for
-  # Xcode 26.0/26.1 — see docs/ASSETS.md.
-  RealityHD:
-    path: Vendor/RealityHD
 targets:
   FlyFree:
     type: application
@@ -20,8 +15,6 @@ targets:
       - App/FlyFree
     dependencies:
       - package: FlyFreeCore
-      - package: RealityHD
-        product: RealityHD
     info:
       path: App/FlyFree/Info.plist
       properties:

@@ -44,7 +44,6 @@ struct HangarView: View {
                         }
                     }
                     Toggle("Invert pitch", isOn: $model.invertPitch)
-                    Toggle("HD scenery (RealityHD)", isOn: $model.hdScenery)
                     Picker("Input", selection: $model.inputSource) {
                         ForEach(AppModel.InputSource.allCases) { Text($0.rawValue).tag($0) }
                     }
@@ -62,10 +61,6 @@ struct HangarView: View {
             .navigationTitle("FlyFree")
             .task {
                 // Development aid: `-FlyFreeAutoLaunch` skips the hangar (e.g. for simulator runs).
-                // `-FlyFreeHD NO` turns RealityHD scenery off (performance comparisons).
-                if UserDefaults.standard.object(forKey: "FlyFreeHD") != nil {
-                    model.hdScenery = UserDefaults.standard.bool(forKey: "FlyFreeHD")
-                }
                 // `-FlyFreeCraft <id>` preselects a craft.
                 if let id = UserDefaults.standard.string(forKey: "FlyFreeCraft"),
                    let craft = CraftCatalog.all.first(where: { $0.id == id }) {

@@ -9,9 +9,10 @@ import UIKit
 final class SpeedGauge {
     let entity = Entity()
     private let needle = Entity()
-    private let readout = GlyphText(size: 0.014, color: .holoGreen, maxCharacters: 6)
+    private let readout = ModelEntity()
     private let scale: GaugeScale
     private let radius: Float = 0.075
+    private var shownValue: Int?
     private var smoothedFraction: Float = 0
 
     /// 270° sweep from lower-left (0) clockwise to lower-right (max).
@@ -55,8 +56,8 @@ final class SpeedGauge {
         let unit = Self.text(scale.unit, size: 0.007, color: UIColor(white: 0.7, alpha: 1))
         unit.position += [0, -0.05, 0.001]
         entity.addChild(unit)
-        readout.entity.position = [0, -0.035, 0.001]
-        entity.addChild(readout.entity)
+        readout.position = [0, -0.035, 0.001]
+        entity.addChild(readout)
 
         // Needle: pivots about the centre (the needle points along +Y at angle 0).
         let blade = ModelEntity(mesh: .generateBox(size: [0.0028, radius * 0.92, 0.0015], cornerRadius: 0.0007),
@@ -76,7 +77,14 @@ final class SpeedGauge {
         smoothedFraction += (target - smoothedFraction) * 0.25
         needle.orientation = simd_quatf(angle: Self.angle(Double(smoothedFraction)), axis: [0, 0, 1])
 
-        readout.set(speed >= 10_000 ? String(format: "%.1fk", speed / 1000) : "\(Int(speed.rounded()))")
+        let rounded = speed >= 1000 ? Int(speed / 10) * 10 : Int(speed.rounded())
+        guard rounded != shownValue else { return }
+        shownValue = rounded
+        let text = speed >= 10_000 ? String(format: "%.1fk", speed / 1000) : "\(rounded)"
+        let mesh = MeshResource.generateText(text, extrusionDepth: 0.0005,
+                                             font: .monospacedDigitSystemFont(ofSize: 0.014, weight: .semibold))
+        readout.model = ModelComponent(mesh: mesh, materials: [MeshFactory.glow(.holoGreen)])
+        readout.position = [-mesh.bounds.center.x, -0.035 - mesh.bounds.center.y, 0.001]
     }
 
     private static func text(_ string: String, size: CGFloat, color: UIColor) -> ModelEntity {
